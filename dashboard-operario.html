@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  
+  <link rel="apple-touch-icon" href="/favicon.png">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Crosti Cookies — Panel Operario. Plan de horneado JIT, registro de mermas e inventario de cierre.">
+  <meta name="theme-color" content="#7B1D2A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Panel Operario — Crosti Cookies</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="manifest" href="./manifest.json">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --granate: #7B1D2A; --granate-deep: #5C1420; --granate-light: #9E2535;
+      --crema: #FFF8F0; --crema-dark: #F0E4CC; --blanco: #FFFFFF;
+      --gold: #C9A84C; --gold-light: #E8C96A;
+      --text-dark: #2D1B1E; --text-muted: #8B6B72;
+      --success: #22863a; --warning: #D97706; --error: #DC2626;
+      --success-bg: #F0FFF4; --warning-bg: #FFFBEB; --error-bg: #FFF5F5;
+      --radius: 16px; --radius-sm: 10px;
+    }
+    html, body { height: 100%; background: #F2E8DC; font-family: 'Outfit', sans-serif; }
+
+    /* ── TOPBAR ─────────────────────────────────────────────── */
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      background: linear-gradient(135deg, var(--granate-deep) 0%, var(--granate) 100%);
+      padding: 0 16px;
+      height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    }
+    .topbar-left { display: flex; align-items: center; gap: 10px; }
+    .topbar-logo {
+      width: 36px; height: 36px;
+      background: rgba(201,168,76,0.2);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .topbar-logo svg { width: 20px; height: 20px; fill: var(--gold); }
+    .topbar-title { font-size: 15px; font-weight: 700; color: var(--blanco); }
+    .topbar-sub { font-size: 11px; color: rgba(255,255,255,0.65); margin-top: 1px; }
+    .topbar-right { display: flex; align-items: center; gap: 8px; }
+    .tienda-badge {
+      background: rgba(201,168,76,0.25);
+      color: var(--gold-light);
+      font-size: 11px; font-weight: 700;
+      padding: 4px 10px; border-radius: 20px;
+      letter-spacing: 0.5px;
+    }
+    .btn-logout {
+      background: rgba(255,255,255,0.12); border: none; cursor: pointer;
+      color: white; padding: 6px; border-radius: 8px;
+      display: flex; align-items: center;
+    }
+
+    /* ── NAVIGATION TABS ────────────────────────────────────── */
+    .nav-tabs {
+      display: flex; background: var(--granate); overflow-x: auto;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      scrollbar-width: none;
+    }
+    .nav-tabs::-webkit-scrollbar { display: none; }
+    .nav-tab {
+      flex: 1; min-width: 0; padding: 11px 4px;
+      background: none; border: none; cursor: pointer;
+      color: rgba(255,255,255,0.55); font-family: 'Outfit', sans-serif;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.3px;
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      transition: all 0.2s; white-space: nowrap; position: relative;
+    }
+    .nav-tab.active { color: var(--gold-light); }
+    .nav-tab.active::after {
+      content: ''; position: absolute; bottom: 0; left: 20%; right: 20%;
+      height: 2.5px; background: var(--gold); border-radius: 2px 2px 0 0;
+    }
+    .nav-tab svg { width: 20px; height: 20px; }
+    .badge-dot {
+      position: absolute; top: 6px; right: calc(50% - 18px);
+      width: 8px; height: 8px; background: var(--error);
+      border-radius: 50%; border: 1.5px solid var(--granate);
+    }
+
+    /* ── MAIN CONTENT ───────────────────────────────────────── */
+    .main { padding: 16px; max-width: 600px; margin: 0 auto; }
+    .tab-panel { display: none; animation: fadeIn 0.3s ease; }
+    .tab-panel.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ── CARDS ──────────────────────────────────────────────── */
+    .card {
+      background: var(--crema); border-radius: var(--radius);
+      padding: 20px; margin-bottom: 14px;
+      box-shadow: 0 2px 12px rgba(123,29,42,0.08);
+    }
+    .card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-size: 14px; font-weight: 700; color: var(--text-dark);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card-title svg { width: 18px; height: 18px; color: var(--granate); }
+    .section-label {
+      font-size: 11px; font-weight: 700; color: var(--text-muted);
+      letter-spacing: 1.5px; text-transform: uppercase;
+      margin-bottom: 12px; margin-top: 4px;
+    }
+
+    /* ── TIMER COUNTDOWN ────────────────────────────────────── */
+    .timer-card {
+      background: linear-gradient(135deg, var(--granate-deep) 0%, var(--granate) 100%);
+      border-radius: var(--radius); padding: 18px 20px; margin-bottom: 14px;
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: 0 4px 16px rgba(123,29,42,0.3);
+    }
+    .timer-label { color: rgba(255,255,255,0.75); font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
+    .timer-value { color: var(--gold-light); font-size: 34px; font-weight: 800; line-height: 1; }
+    .timer-sub { color: rgba(255,255,255,0.6); font-size: 11px; margin-top: 2px; }
+    .timer-icon {
+      width: 52px; height: 52px; background: rgba(201,168,76,0.2);
+      border-radius: 14px; display: flex; align-items: center; justify-content: center;
+    }
+    .timer-icon svg { width: 28px; height: 28px; stroke: var(--gold); fill: none; stroke-width: 2; }
+
+    /* ── BAKING PLAN CARDS ──────────────────────────────────── */
+    .bake-list { display: flex; flex-direction: column; gap: 10px; }
+    .bake-item {
+      background: var(--blanco); border-radius: var(--radius-sm);
+      padding: 14px 16px; border-left: 4px solid var(--granate);
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      transition: transform 0.15s;
+    }
+    .bake-item:active { transform: scale(0.99); }
+    .bake-name { font-size: 14px; font-weight: 600; color: var(--text-dark); }
+    .bake-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .bake-badge {
+      background: var(--granate); color: var(--blanco);
+      font-size: 20px; font-weight: 800; padding: 8px 14px;
+      border-radius: var(--radius-sm); min-width: 60px; text-align: center;
+      line-height: 1;
+    }
+    .bake-badge-sub { font-size: 10px; font-weight: 500; opacity: 0.8; }
+    .bake-item.deluxe { border-left-color: var(--gold); }
+    .bake-item.deluxe .bake-badge { background: linear-gradient(135deg, var(--gold) 0%, #A07830 100%); }
+
+    /* ── MERMA FORM ─────────────────────────────────────────── */
+    .form-row { margin-bottom: 14px; }
+    label.field-label {
+      display: block; font-size: 12px; font-weight: 600;
+      color: var(--text-muted); letter-spacing: 0.5px;
+      text-transform: uppercase; margin-bottom: 5px;
+    }
+    select, input[type="number"], input[type="text"], textarea {
+      width: 100%; padding: 11px 13px;
+      border: 1.5px solid #E5D5C5; border-radius: var(--radius-sm);
+      background: var(--blanco); font-family: 'Outfit', sans-serif;
+      font-size: 14px; color: var(--text-dark); outline: none;
+      transition: border-color 0.2s;
+      -webkit-appearance: none;
+    }
+    select:focus, input:focus, textarea:focus { border-color: var(--granate); }
+    textarea { resize: vertical; min-height: 70px; }
+
+    /* ── FOTO MERMA UPLOAD ──────────────────────────────────── */
+    .foto-zone {
+      border: 2.5px dashed #DDCAB8; border-radius: var(--radius-sm);
+      padding: 20px; text-align: center; cursor: pointer;
+      transition: all 0.2s; background: var(--blanco);
+      position: relative;
+    }
+    .foto-zone.required-photo { border-color: var(--error); background: var(--error-bg); }
+    .foto-zone.has-photo { border-color: var(--success); background: var(--success-bg); border-style: solid; }
+    .foto-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .foto-icon { font-size: 32px; margin-bottom: 8px; }
+    .foto-text { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+    .foto-required-label {
+      background: var(--error); color: white; font-size: 11px; font-weight: 700;
+      padding: 3px 8px; border-radius: 6px; display: inline-block; margin-top: 6px;
+    }
+
+    /* ── ALERT BANNER ───────────────────────────────────────── */
+    .alert-banner {
+      display: none; padding: 12px 14px; border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 500; align-items: flex-start; gap: 10px;
+      margin-bottom: 14px;
+    }
+    .alert-banner.show { display: flex; }
+    .alert-warning { background: var(--warning-bg); color: #92400E; border: 1px solid #FCD34D; }
+    .alert-error { background: var(--error-bg); color: var(--error); border: 1px solid #FECACA; }
+    .alert-success { background: var(--success-bg); color: var(--success); border: 1px solid #BBF7D0; }
+    .alert-banner svg { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
+
+    /* ── BUTTONS ────────────────────────────────────────────── */
+    .btn {
+      padding: 13px 20px; border: none; border-radius: var(--radius-sm);
+      font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700;
+      cursor: pointer; transition: all 0.2s; display: inline-flex;
+      align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--granate) 0%, var(--granate-light) 100%);
+      color: white; width: 100%;
+      box-shadow: 0 4px 14px rgba(123,29,42,0.3);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(123,29,42,0.38); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .btn-secondary {
+      background: var(--crema-dark); color: var(--text-dark);
+      border: 1px solid #D5C0A8;
+    }
+    .btn svg { width: 18px; height: 18px; }
+
+    /* ── INVENTARIO GRID ────────────────────────────────────── */
+    .inv-grid { display: grid; gap: 10px; }
+    .inv-item {
+      background: var(--blanco); border-radius: var(--radius-sm); padding: 12px 14px;
+      display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    .inv-name { font-size: 13px; font-weight: 600; color: var(--text-dark); }
+    .inv-unit { font-size: 11px; color: var(--text-muted); }
+    .inv-stock-input {
+      width: 80px; padding: 8px 10px; text-align: center;
+      border: 1.5px solid #E5D5C5; border-radius: 8px;
+      font-size: 15px; font-weight: 700; color: var(--text-dark);
+    }
+    .inv-alert { color: var(--error); font-size: 11px; font-weight: 600; }
+
+    /* ── SKELETON LOADER ────────────────────────────────────── */
+    .skeleton {
+      background: linear-gradient(90deg, #EDE0D0 25%, #E0D0BE 50%, #EDE0D0 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 8px;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* ── LOADING STATE ──────────────────────────────────────── */
+    .spinner-inline {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white; border-radius: 50%;
+      animation: spin 0.8s linear infinite; display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── STATUS INDICATOR ───────────────────────────────────── */
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    .status-dot.online { background: var(--success); }
+    .status-dot.offline { background: var(--error); animation: none; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    /* ── HORA ACTUAL ────────────────────────────────────────── */
+    .hora-actual {
+      text-align: center; padding: 8px;
+      font-size: 13px; color: var(--text-muted); font-weight: 500;
+    }
+
+    /* ── RESPONSIVE ─────────────────────────────────────────── */
+    @media (min-width: 600px) {
+      .bake-list { display: grid; grid-template-columns: 1fr 1fr; }
+      .inv-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-logo">
+      <img src="/logo.png" alt="Crosti" style="width: 28px; height: 28px; border-radius: 8px; object-fit: contain;">
+    </div>
+    <div>
+      <div class="topbar-title">Crosti Cookies</div>
+      <div class="topbar-sub" id="userDisplay">Cargando...</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <span class="tienda-badge" id="tiendaBadge">–</span>
+    <button class="btn-logout" id="btnLogout" title="Cerrar sesión">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<!-- NAV TABS -->
+<nav class="nav-tabs" role="tablist">
+  <button class="nav-tab active" data-tab="horneado" role="tab" aria-selected="true" id="tab-horneado">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+    </svg>
+    Plan Horno
+  </button>
+  <button class="nav-tab" data-tab="mermas" role="tab" aria-selected="false" id="tab-mermas">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    </svg>
+    Mermas
+    <span class="badge-dot" id="mermaBadge" style="display:none"></span>
+  </button>
+  <button class="nav-tab" data-tab="inventario" role="tab" aria-selected="false" id="tab-inventario">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+      <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+    </svg>
+    Inventario
+  </button>
+</nav>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- ══ TAB: PLAN HORNEADO ══ -->
+  <div class="tab-panel active" id="panel-horneado">
+    <!-- Timer hasta siguiente tanda -->
+    <div class="timer-card">
+      <div>
+        <div class="timer-label">⏱ Próxima tanda en</div>
+        <div class="timer-value" id="countdownTimer">--:--</div>
+        <div class="timer-sub" id="timerSub">Cargando plan...</div>
+      </div>
+      <div class="timer-icon">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+    </div>
+
+    <div class="hora-actual" id="horaActualDisplay"></div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+          </svg>
+          Plan JIT — Hornada Actual
+        </div>
+        <button class="btn btn-secondary" id="btnRefreshPlan" style="padding:7px 12px;font-size:12px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.8"/>
+          </svg>
+          Actualizar
+        </button>
+      </div>
+      <div class="bake-list" id="bakePlanList">
+        <!-- Skeleton loaders -->
+        <div class="bake-item"><div style="flex:1"><div class="skeleton" style="height:14px;width:70%;margin-bottom:6px"></div><div class="skeleton" style="height:11px;width:50%"></div></div><div class="skeleton" style="width:60px;height:52px;border-radius:10px"></div></div>
+        <div class="bake-item"><div style="flex:1"><div class="skeleton" style="height:14px;width:60%;margin-bottom:6px"></div><div class="skeleton" style="height:11px;width:40%"></div></div><div class="skeleton" style="width:60px;height:52px;border-radius:10px"></div></div>
+        <div class="bake-item"><div style="flex:1"><div class="skeleton" style="height:14px;width:75%;margin-bottom:6px"></div><div class="skeleton" style="height:11px;width:55%"></div></div><div class="skeleton" style="width:60px;height:52px;border-radius:10px"></div></div>
+      </div>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--crema-dark);">
+        <p style="font-size:11px;color:var(--text-muted);text-align:center;">
+          🧠 Algoritmo JIT basado en media ponderada de las últimas 3 semanas<br>
+          Actualización automática cada <strong>90 minutos</strong>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TAB: MERMAS ══ -->
+  <div class="tab-panel" id="panel-mermas">
+    <!-- Alerta si merma supera 2.5% -->
+    <div class="alert-banner alert-warning" id="alertMermaUmbral">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      <div>
+        <strong>⚠️ Merma supera el 2.5%</strong><br>
+        <span id="alertMermaMsg">Se requiere fotografía del contenedor de mermas para poder registrar el cierre.</span>
+      </div>
+    </div>
+
+    <div class="alert-banner" id="alertMermaResult">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+      <span id="alertMermaResultMsg"></span>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:16px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;color:var(--granate)">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+        Registrar Merma del Día
+      </div>
+
+      <form id="mermaForm" novalidate>
+        <div class="form-row">
+          <label class="field-label">Producto *</label>
+          <select id="mermaProducto" required>
+            <option value="">— Selecciona producto —</option>
+          </select>
+        </div>
+
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <label class="field-label">Unidades *</label>
+            <input type="number" id="mermaCantidad" min="0.5" step="0.5" placeholder="0" required>
+          </div>
+          <div>
+            <label class="field-label">Peso aprox. (g)</label>
+            <input type="number" id="mermaPeso" min="0" step="10" placeholder="0">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label class="field-label">Motivo *</label>
+          <select id="mermaMotivo" required>
+            <option value="">— Selecciona motivo —</option>
+            <option value="Horneado exceso">Horneado exceso</option>
+            <option value="Rotura manipulación">Rotura / manipulación</option>
+            <option value="Caducidad calidad">Caducidad / calidad</option>
+            <option value="Error operativo">Error operativo</option>
+            <option value="Muestra degustación">Muestra degustación</option>
+            <option value="Merma natural enfriado">Merma natural enfriado</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label class="field-label">Notas (opcional)</label>
+          <textarea id="mermaNotas" placeholder="Descripción adicional..."></textarea>
+        </div>
+
+        <!-- Foto zona -->
+        <div class="form-row">
+          <label class="field-label" id="fotoLabel">Fotografía del contenedor</label>
+          <div class="foto-zone" id="fotoZone">
+            <input type="file" id="mermaFoto" accept="image/*" capture="environment">
+            <div class="foto-icon" id="fotoIcon">📷</div>
+            <div class="foto-text" id="fotoText">Toca para tomar foto o adjuntar imagen</div>
+            <span class="foto-required-label" id="fotoRequiredLabel" style="display:none">OBLIGATORIA — Merma &gt;2.5%</span>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="btnSaveMerma">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          Guardar Merma
+        </button>
+      </form>
+    </div>
+
+    <!-- Estado mermas del día -->
+    <div class="card" id="resumenMermaCard">
+      <div class="card-title" style="margin-bottom:14px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>
+        </svg>
+        Mermas registradas hoy
+      </div>
+      <div id="mermaListHoy" style="font-size:13px;color:var(--text-muted);">Cargando...</div>
+    </div>
+  </div>
+
+  <!-- ══ TAB: INVENTARIO DE CIERRE ══ -->
+  <div class="tab-panel" id="panel-inventario">
+    <div class="alert-banner" id="alertInvResult">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+      <span id="alertInvMsg"></span>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:6px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;color:var(--granate)">
+          <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+          <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+        </svg>
+        Inventario de Cierre
+      </div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">
+        Introduce el stock físico real al cierre (cuenta lo que queda en tienda).
+      </p>
+
+      <div class="inv-grid" id="inventarioGrid">
+        <!-- Generado por JS -->
+        <div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-muted);font-size:13px">Cargando ingredientes críticos...</div>
+      </div>
+
+      <div style="margin-top:18px">
+        <button class="btn btn-primary" id="btnSaveInventario">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+          </svg>
+          Enviar Inventario de Cierre
+        </button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  // ─── AUTH GUARD ──────────────────────────────────────────
+  const token = localStorage.getItem('cc_token');
+  const rol = localStorage.getItem('cc_rol');
+  const tienda = localStorage.getItem('cc_tienda');
+  const nombre = localStorage.getItem('cc_nombre');
+
+  if (!token || !['OPERARIO','FRANQUICIADO'].includes(rol)) {
+    window.location.href = './index.html';
+  }
+
+  // ─── UI INIT ─────────────────────────────────────────────
+  document.getElementById('userDisplay').textContent = nombre || rol;
+  document.getElementById('tiendaBadge').textContent = tienda || '–';
+
+  const API = (path) => fetch(path, {
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+  });
+
+  // ─── TABS ────────────────────────────────────────────────
+  document.querySelectorAll('.nav-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.nav-tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected','false'); });
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active'); tab.setAttribute('aria-selected','true');
+      document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ─── LOGOUT ──────────────────────────────────────────────
+  document.getElementById('btnLogout').addEventListener('click', async () => {
+    await fetch('/api/auth/logout', { method:'POST', headers:{'Authorization':`Bearer ${token}`} }).catch(()=>{});
+    localStorage.clear();
+    window.location.href = './index.html';
+  });
+
+  // ─── COUNTDOWN TIMER (90 min tandas) ────────────────────
+  let nextBakeTime = null;
+  function startCountdown() {
+    const now = new Date();
+    const min = now.getMinutes();
+    const nextMark = min < 30 ? 30 : min < 60 ? 60 : 30;
+    const next = new Date(now);
+    if (nextMark === 60) { next.setHours(now.getHours() + 1, 30, 0, 0); }
+    else { next.setMinutes(nextMark, 0, 0); }
+    nextBakeTime = next;
+
+    function tick() {
+      const diff = nextBakeTime - new Date();
+      if (diff <= 0) { startCountdown(); return; }
+      const m = String(Math.floor(diff / 60000)).padStart(2,'0');
+      const s = String(Math.floor((diff % 60000) / 1000)).padStart(2,'0');
+      document.getElementById('countdownTimer').textContent = `${m}:${s}`;
+      document.getElementById('timerSub').textContent = `Inicio hornada: ${nextBakeTime.toTimeString().slice(0,5)}`;
+    }
+    tick();
+    setInterval(tick, 1000);
+  }
+  startCountdown();
+
+  // Hora actual display
+  function updateHora() {
+    const now = new Date();
+    const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+    document.getElementById('horaActualDisplay').textContent =
+      `${dias[now.getDay()]} · ${now.toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'})}`;
+  }
+  updateHora(); setInterval(updateHora, 10000);
+
+  // ─── PLAN JIT ────────────────────────────────────────────
+  const CATEGORIA_LABEL = { 'Clasica': 'Clásica', 'Deluxe': '⭐ Deluxe' };
+  let planData = [];
+
+  async function cargarPlanHorneado() {
+    const hora = new Date().getHours();
+    try {
+      const res = await API(`/api/horneado/plan?hora=${hora}`);
+      const data = await res.json();
+      planData = data.plan || [];
+      renderPlanHorneado(planData);
+    } catch (e) {
+      document.getElementById('bakePlanList').innerHTML =
+        '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">⚠️ Error al cargar plan. Verifica conexión.</div>';
+    }
+  }
+
+  function renderPlanHorneado(plan) {
+    const container = document.getElementById('bakePlanList');
+    if (!plan.length) {
+      container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px;">✅ Sin producción programada para esta hora</div>';
+      return;
+    }
+    container.innerHTML = plan.map(p => {
+      const isDeluxe = p.nombre.includes('Deluxe') || p.nombre.includes('deluxe');
+      return `
+        <div class="bake-item ${isDeluxe ? 'deluxe' : ''}">
+          <div>
+            <div class="bake-name">${p.nombre}</div>
+            <div class="bake-meta">🕐 Iniciar: ${p.hora_inicio_hornado} · ${p.minutos_horno}min horno</div>
+            <div class="bake-meta" style="margin-top:2px">Media hist.: ${p.media_historica_hora} ud/h · Factor: ×${p.factor_dia}</div>
+          </div>
+          <div class="bake-badge">
+            ${p.unidades_tanda}
+            <div class="bake-badge-sub">ud/tanda</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  cargarPlanHorneado();
+  document.getElementById('btnRefreshPlan').addEventListener('click', cargarPlanHorneado);
+  // Auto-refresh cada 90 min
+  setInterval(cargarPlanHorneado, 90 * 60 * 1000);
+
+  // ─── PRODUCTOS PARA MERMAS ───────────────────────────────
+  async function cargarProductos() {
+    try {
+      // Usar datos estáticos como fallback (también cargados desde API en entorno real)
+      const PRODUCTOS = [
+        { id:'CC-CLA-001', nombre:'Cookie Clásica Chocolate Chip' },
+        { id:'CC-CLA-002', nombre:'Cookie Clásica Doble Chocolate' },
+        { id:'CC-CLA-003', nombre:'Cookie Clásica Vainilla Pecana' },
+        { id:'CC-CLA-004', nombre:'Cookie Clásica Mantequilla Avellana' },
+        { id:'CC-DLX-001', nombre:'Cookie Deluxe Trufa Negra' },
+        { id:'CC-DLX-002', nombre:'Cookie Deluxe Pistacchio' },
+        { id:'CC-DLX-003', nombre:'Cookie Deluxe Caramelo Flor de Sal' },
+        { id:'CC-SOD-001', nombre:'Soda Prebiótica Jengibre Limón' },
+        { id:'CC-SOD-002', nombre:'Soda Prebiótica Hibisco Menta' },
+        { id:'CC-CAF-001', nombre:'Espresso de Especialidad' },
+        { id:'CC-CAF-002', nombre:'Flat White' },
+      ];
+      const sel = document.getElementById('mermaProducto');
+      PRODUCTOS.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id; opt.textContent = p.nombre;
+        sel.appendChild(opt);
+      });
+    } catch {}
+  }
+  cargarProductos();
+
+  // ─── VALIDAR MERMA (umbral 2.5%) ─────────────────────────
+  let mermaPctActual = 0;
+  async function checkMermaUmbral() {
+    try {
+      const res = await API('/api/mermas/validar');
+      const data = await res.json();
+      mermaPctActual = data.pct_merma || 0;
+      const badge = document.getElementById('mermaBadge');
+      const alertEl = document.getElementById('alertMermaUmbral');
+      const fotoZone = document.getElementById('fotoZone');
+      const fotoRequired = document.getElementById('fotoRequiredLabel');
+
+      if (data.requiere_foto) {
+        badge.style.display = 'block';
+        alertEl.classList.add('show');
+        document.getElementById('alertMermaMsg').textContent =
+          `Merma actual: ${data.pct_merma}% (${data.total_merma} ud de ${data.total_produccion} producidas). Fotografía del contenedor OBLIGATORIA.`;
+        fotoZone.classList.add('required-photo');
+        fotoRequired.style.display = 'inline-block';
+        document.getElementById('fotoLabel').textContent = 'Fotografía del contenedor ⚠️ OBLIGATORIA';
+      } else {
+        badge.style.display = 'none';
+        alertEl.classList.remove('show');
+        fotoZone.classList.remove('required-photo');
+        fotoRequired.style.display = 'none';
+      }
+    } catch {}
+  }
+
+  // ─── FOTO PREVIEW ────────────────────────────────────────
+  let fotoFile = null;
+  document.getElementById('mermaFoto').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      fotoFile = file;
+      document.getElementById('fotoIcon').textContent = '✅';
+      document.getElementById('fotoText').textContent = file.name;
+      document.getElementById('fotoZone').classList.add('has-photo');
+      document.getElementById('fotoZone').classList.remove('required-photo');
+    }
+  });
+
+  // ─── SUBMIT MERMA ─────────────────────────────────────────
+  document.getElementById('mermaForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('btnSaveMerma');
+    const alertResult = document.getElementById('alertMermaResult');
+
+    const id_producto = document.getElementById('mermaProducto').value;
+    const cantidad_ud = parseFloat(document.getElementById('mermaCantidad').value);
+    const peso_g = parseFloat(document.getElementById('mermaPeso').value) || null;
+    const motivo = document.getElementById('mermaMotivo').value;
+    const notas = document.getElementById('mermaNotas').value;
+
+    if (!id_producto || !cantidad_ud || !motivo) {
+      alertResult.className = 'alert-banner alert-error show';
+      document.getElementById('alertMermaResultMsg').textContent = 'Completa los campos obligatorios (producto, cantidad, motivo).';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner-inline"></div> Guardando...';
+
+    try {
+      let url_foto_r2 = null;
+
+      // Si hay foto, subirla primero a R2
+      if (fotoFile) {
+        const fd = new FormData();
+        fd.append('foto', fotoFile);
+        const fotoRes = await fetch('/api/mermas/foto', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: fd,
+        });
+        const fotoData = await fotoRes.json();
+        if (fotoData.url_foto_r2) url_foto_r2 = fotoData.url_foto_r2;
+      }
+
+      // Si merma > 2.5% y no hay foto → bloquear
+      if (mermaPctActual > 2.5 && !url_foto_r2) {
+        alertResult.className = 'alert-banner alert-error show';
+        document.getElementById('alertMermaResultMsg').textContent = '⚠️ Debes adjuntar una fotografía del contenedor de mermas (merma supera 2.5%).';
+        return;
+      }
+
+      const res = await fetch('/api/mermas', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_producto, cantidad_ud, peso_g, motivo, notas, url_foto_r2 }),
+      });
+
+      if (res.ok) {
+        alertResult.className = 'alert-banner alert-success show';
+        document.getElementById('alertMermaResultMsg').textContent = '✅ Merma registrada correctamente.';
+        document.getElementById('mermaForm').reset();
+        fotoFile = null;
+        document.getElementById('fotoIcon').textContent = '📷';
+        document.getElementById('fotoText').textContent = 'Toca para tomar foto o adjuntar imagen';
+        document.getElementById('fotoZone').classList.remove('has-photo');
+        await checkMermaUmbral();
+        cargarMermasHoy();
+      } else {
+        const err = await res.json();
+        alertResult.className = 'alert-banner alert-error show';
+        document.getElementById('alertMermaResultMsg').textContent = err.error || 'Error al guardar merma.';
+      }
+    } catch {
+      alertResult.className = 'alert-banner alert-error show';
+      document.getElementById('alertMermaResultMsg').textContent = 'Error de red. ¿Tienes conexión?';
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><polyline points="20 6 9 17 4 12"/></svg> Guardar Merma';
+    }
+  });
+
+  // ─── MERMAS HOY ──────────────────────────────────────────
+  async function cargarMermasHoy() {
+    const el = document.getElementById('mermaListHoy');
+    try {
+      const res = await API('/api/mermas/validar');
+      const data = await res.json();
+      el.innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:4px">
+          <div style="text-align:center;padding:10px;background:var(--blanco);border-radius:8px">
+            <div style="font-size:20px;font-weight:800;color:var(--text-dark)">${data.total_merma}</div>
+            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Uds merma</div>
+          </div>
+          <div style="text-align:center;padding:10px;background:var(--blanco);border-radius:8px">
+            <div style="font-size:20px;font-weight:800;color:${data.pct_merma>2.5?'var(--error)':'var(--success)'}">${data.pct_merma}%</div>
+            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">% merma</div>
+          </div>
+          <div style="text-align:center;padding:10px;background:var(--blanco);border-radius:8px">
+            <div style="font-size:20px;font-weight:800;color:var(--text-dark)">${data.total_vendido}</div>
+            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Uds vendidas</div>
+          </div>
+        </div>
+        <div style="text-align:center;margin-top:8px;font-size:12px;color:${data.pct_merma>2.5?'var(--error)':'var(--success)'}">
+          ${data.pct_merma > 2.5 ? '⚠️ Por encima del umbral (2.5%) — Foto obligatoria' : '✅ Dentro del umbral permitido'}
+        </div>
+      `;
+    } catch { el.textContent = 'Sin datos disponibles'; }
+  }
+
+  // ─── INVENTARIO ──────────────────────────────────────────
+  const INGREDIENTES_CRITICOS = [
+    { id:'ING-015', nombre:'Masa IQF Clásica', unidad:'ud', min:50 },
+    { id:'ING-016', nombre:'Masa IQF Deluxe', unidad:'ud', min:20 },
+    { id:'ING-009', nombre:'Chips Chocolate', unidad:'kg', min:2 },
+    { id:'ING-002', nombre:'Mantequilla 82%', unidad:'kg', min:3 },
+    { id:'ING-001', nombre:'Harina T55', unidad:'kg', min:10 },
+    { id:'ING-019', nombre:'Leche Entera', unidad:'L', min:5 },
+    { id:'ING-017', nombre:'Soda Prebiótica', unidad:'ud', min:12 },
+    { id:'ING-018', nombre:'Café Green Bean', unidad:'kg', min:1 },
+  ];
+
+  function renderInventarioGrid() {
+    const grid = document.getElementById('inventarioGrid');
+    grid.innerHTML = INGREDIENTES_CRITICOS.map(ing => `
+      <div class="inv-item">
+        <div>
+          <div class="inv-name">${ing.nombre}</div>
+          <div class="inv-unit">Unidad: ${ing.unidad} · Mínimo: ${ing.min} ${ing.unidad}</div>
+        </div>
+        <input type="number" class="inv-stock-input" id="inv-${ing.id}"
+               min="0" step="${ing.unidad==='ud'?1:0.1}" placeholder="0"
+               data-min="${ing.min}" onchange="checkMinStock(this, ${ing.min})">
+      </div>
+    `).join('');
+  }
+
+  function checkMinStock(input, min) {
+    const val = parseFloat(input.value);
+    if (!isNaN(val) && val < min) {
+      input.style.borderColor = 'var(--error)';
+      input.style.color = 'var(--error)';
+    } else {
+      input.style.borderColor = '';
+      input.style.color = '';
+    }
+  }
+
+  renderInventarioGrid();
+
+  document.getElementById('btnSaveInventario').addEventListener('click', async () => {
+    const btn = document.getElementById('btnSaveInventario');
+    const alertEl = document.getElementById('alertInvResult');
+
+    const items = INGREDIENTES_CRITICOS.map(ing => ({
+      id_ingrediente: ing.id,
+      stock_fisico: parseFloat(document.getElementById(`inv-${ing.id}`)?.value) || 0,
+    })).filter(i => i.stock_fisico !== null);
+
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner-inline"></div> Enviando...';
+
+    try {
+      const res = await fetch('/api/inventario/cierre', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items, validar_merma: true }),
+      });
+      const data = await res.json();
+
+      if (res.status === 422 && data.bloqueado) {
+        alertEl.className = 'alert-banner alert-error show';
+        document.getElementById('alertInvMsg').textContent = data.mensaje;
+        // Redirigir a tab de mermas
+        document.querySelector('[data-tab="mermas"]').click();
+      } else if (res.ok) {
+        alertEl.className = 'alert-banner alert-success show';
+        document.getElementById('alertInvMsg').textContent = `✅ Inventario de cierre enviado (${data.items_registrados} ingredientes registrados).`;
+      } else {
+        alertEl.className = 'alert-banner alert-error show';
+        document.getElementById('alertInvMsg').textContent = data.error || 'Error al guardar inventario.';
+      }
+    } catch {
+      alertEl.className = 'alert-banner alert-error show';
+      document.getElementById('alertInvMsg').textContent = 'Error de red.';
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Enviar Inventario de Cierre';
+    }
+  });
+
+  // ─── INIT ────────────────────────────────────────────────
+  checkMermaUmbral();
+  cargarMermasHoy();
+
+  // ─── SERVICE WORKER ──────────────────────────────────────
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+</script>
+</body>
+</html>

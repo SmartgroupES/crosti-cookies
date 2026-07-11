@@ -1,0 +1,23 @@
+{
+  "name": "crosti-cookies-pwa",
+  "version": "1.0.0",
+  "description": "Ecosistema PWA corporativo para la cadena de franquicias Crosti Cookies",
+  "main": "_worker.js",
+  "scripts": {
+    "dev": "npx wrangler pages dev . --compatibility-date=2024-03-20",
+    "deploy": "npx wrangler pages deploy .",
+    "db:create": "npx wrangler d1 create crosti-cookies-db",
+    "db:migrate": "npx wrangler d1 execute crosti-cookies-db --file=schema.sql",
+    "db:migrate:remote": "npx wrangler d1 execute crosti-cookies-db --file=schema.sql --remote",
+    "db:seed": "npx wrangler d1 execute crosti-cookies-db --file=seed.sql --remote",
+    "r2:create": "npx wrangler r2 bucket create crosti-cookies-mermas",
+    "setup": "npm run db:create && npm run r2:create && npm run db:migrate:remote"
+  },
+  "keywords": ["cloudflare", "pwa", "cookies", "franquicias", "d1", "r2"],
+  "author": "Crosti Cookies",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260708.1",
+    "wrangler": "^4.86.0"
+  }
+}

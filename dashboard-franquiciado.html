@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  
+  <link rel="apple-touch-icon" href="/favicon.png">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Crosti Cookies — Panel Franquiciado. Cuadro de mando económico de tu tienda: ventas, mermas, personal, KPIs y facturas.">
+  <meta name="theme-color" content="#7B1D2A">
+  <title>Panel Franquiciado — Crosti Cookies</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="manifest" href="./manifest.json">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --granate: #7B1D2A; --granate-deep: #5C1420; --granate-light: #9E2535;
+      --crema: #FFF8F0; --crema-dark: #F0E4CC; --blanco: #FFFFFF;
+      --gold: #C9A84C; --gold-light: #E8C96A;
+      --text-dark: #2D1B1E; --text-muted: #8B6B72;
+      --success: #22863a; --warning: #D97706; --error: #DC2626;
+      --bg: #F2E8DC; --radius: 16px; --radius-sm: 10px;
+    }
+    body { font-family: 'Outfit', sans-serif; background: var(--bg); min-height: 100vh; }
+
+    /* ── SIDEBAR (Tablet/Desktop) ────────────────────────── */
+    .layout { display: flex; min-height: 100vh; }
+    .sidebar {
+      width: 240px; background: linear-gradient(180deg, var(--granate-deep) 0%, var(--granate) 100%);
+      display: flex; flex-direction: column;
+      position: fixed; top: 0; left: 0; bottom: 0; z-index: 50;
+      transform: translateX(-100%); transition: transform 0.3s ease;
+      box-shadow: 4px 0 20px rgba(0,0,0,0.2);
+    }
+    .sidebar.open { transform: translateX(0); }
+    @media (min-width: 900px) {
+      .sidebar { transform: translateX(0); }
+      .main-wrapper { margin-left: 240px; }
+    }
+    .sidebar-logo {
+      padding: 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.1);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .sidebar-logo-icon {
+      width: 44px; height: 44px; background: rgba(201,168,76,0.2);
+      border-radius: 12px; display: flex; align-items: center; justify-content: center;
+    }
+    .sidebar-logo-icon svg { width: 26px; height: 26px; fill: var(--gold); }
+    .sidebar-brand { color: var(--blanco); font-size: 14px; font-weight: 800; line-height: 1.2; }
+    .sidebar-brand-sub { color: rgba(255,255,255,0.5); font-size: 10px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; }
+
+    .sidebar-user {
+      padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .sidebar-user-name { color: rgba(255,255,255,0.9); font-size: 13px; font-weight: 600; }
+    .sidebar-user-role {
+      color: var(--gold-light); font-size: 10px; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase; margin-top: 2px;
+    }
+
+    .sidebar-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 20px; color: rgba(255,255,255,0.65);
+      cursor: pointer; font-size: 13.5px; font-weight: 500;
+      transition: all 0.2s; text-decoration: none; border: none;
+      background: none; width: 100%;
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.95); }
+    .nav-item.active { background: rgba(201,168,76,0.15); color: var(--gold-light); }
+    .nav-item.active::left { border-left: 3px solid var(--gold); }
+    .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .nav-section-label {
+      padding: 14px 20px 6px; font-size: 10px; font-weight: 700;
+      color: rgba(255,255,255,0.3); letter-spacing: 1.5px; text-transform: uppercase;
+    }
+    .sidebar-footer { padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.1); }
+    .btn-logout-side {
+      display: flex; align-items: center; gap: 8px;
+      color: rgba(255,255,255,0.55); font-size: 13px; font-weight: 500;
+      cursor: pointer; background: none; border: none; width: 100%; padding: 4px 0;
+    }
+    .btn-logout-side:hover { color: rgba(255,255,255,0.9); }
+
+    /* ── MAIN WRAPPER ────────────────────────────────────── */
+    .main-wrapper { flex: 1; display: flex; flex-direction: column; }
+    .topbar {
+      background: var(--blanco); padding: 0 24px; height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: 0 1px 8px rgba(0,0,0,0.06); position: sticky; top: 0; z-index: 40;
+    }
+    .topbar-left { display: flex; align-items: center; gap: 12px; }
+    .menu-toggle {
+      display: flex; background: none; border: none; cursor: pointer;
+      padding: 6px; border-radius: 8px; color: var(--text-dark);
+    }
+    @media (min-width: 900px) { .menu-toggle { display: none; } }
+    .page-title { font-size: 17px; font-weight: 700; color: var(--text-dark); }
+    .date-badge {
+      background: var(--crema-dark); color: var(--text-muted);
+      font-size: 12px; font-weight: 600; padding: 5px 12px; border-radius: 20px;
+    }
+    .tienda-chip {
+      background: var(--granate); color: var(--gold-light);
+      font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 20px;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── CONTENT ─────────────────────────────────────────── */
+    .content { padding: 24px; flex: 1; }
+    .tab-panel { display: none; animation: fadeIn 0.3s ease; }
+    .tab-panel.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ── KPI GRID ────────────────────────────────────────── */
+    .kpi-grid {
+      display: grid; gap: 16px; margin-bottom: 24px;
+      grid-template-columns: repeat(2, 1fr);
+    }
+    @media (min-width: 768px) { .kpi-grid { grid-template-columns: repeat(4, 1fr); } }
+
+    .kpi-card {
+      background: var(--blanco); border-radius: var(--radius); padding: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: relative; overflow: hidden;
+    }
+    .kpi-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--granate), var(--granate-light));
+    }
+    .kpi-label { font-size: 11px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 8px; }
+    .kpi-value { font-size: 28px; font-weight: 800; color: var(--text-dark); line-height: 1; }
+    .kpi-value.positive { color: var(--success); }
+    .kpi-value.warning-val { color: var(--warning); }
+    .kpi-value.danger { color: var(--error); }
+    .kpi-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .kpi-delta {
+      display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 700;
+      padding: 2px 7px; border-radius: 6px; margin-top: 6px;
+    }
+    .kpi-delta.up { background: #E8F5E9; color: var(--success); }
+    .kpi-delta.down { background: #FFEBEE; color: var(--error); }
+
+    /* ── CHART CARD ──────────────────────────────────────── */
+    .chart-card {
+      background: var(--blanco); border-radius: var(--radius);
+      padding: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px;
+    }
+    .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .chart-title { font-size: 15px; font-weight: 700; color: var(--text-dark); }
+    .chart-container { position: relative; height: 220px; }
+
+    /* ── TABLE ───────────────────────────────────────────── */
+    .data-table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th {
+      background: var(--crema-dark); color: var(--text-muted);
+      font-size: 11px; font-weight: 700; letter-spacing: 0.8px;
+      text-transform: uppercase; padding: 10px 14px; text-align: left;
+    }
+    td { padding: 11px 14px; color: var(--text-dark); border-bottom: 1px solid #F0E8DC; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,248,240,0.5); }
+
+    /* ── FOOD COST GAUGE ─────────────────────────────────── */
+    .food-cost-row {
+      display: flex; align-items: center; gap: 12px; padding: 10px 0;
+      border-bottom: 1px solid var(--crema-dark);
+    }
+    .food-cost-row:last-child { border-bottom: none; }
+    .fc-name { font-size: 13px; font-weight: 600; color: var(--text-dark); flex: 1; }
+    .fc-bar-wrap { flex: 2; height: 8px; background: var(--crema-dark); border-radius: 4px; overflow: hidden; }
+    .fc-bar { height: 100%; border-radius: 4px; transition: width 0.8s ease; }
+    .fc-bar.ok { background: linear-gradient(90deg, var(--success), #38d17f); }
+    .fc-bar.warn { background: linear-gradient(90deg, var(--warning), #f59e0b); }
+    .fc-bar.bad { background: linear-gradient(90deg, var(--error), #ef4444); }
+    .fc-pct { font-size: 13px; font-weight: 700; min-width: 44px; text-align: right; }
+
+    /* ── FORM FACTURA ────────────────────────────────────── */
+    .form-grid { display: grid; gap: 14px; }
+    @media (min-width: 600px) { .form-grid-2 { grid-template-columns: 1fr 1fr; } }
+    .field-group { display: flex; flex-direction: column; gap: 5px; }
+    .field-label { font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; text-transform: uppercase; }
+    .field-input {
+      padding: 10px 12px; border: 1.5px solid #E5D5C5; border-radius: var(--radius-sm);
+      background: var(--crema); font-family: 'Outfit', sans-serif; font-size: 14px;
+      color: var(--text-dark); outline: none; transition: border-color 0.2s; -webkit-appearance: none;
+    }
+    .field-input:focus { border-color: var(--granate); }
+
+    /* ── BUTTONS ─────────────────────────────────────────── */
+    .btn {
+      padding: 11px 18px; border: none; border-radius: var(--radius-sm);
+      font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700;
+      cursor: pointer; transition: all 0.2s; display: inline-flex;
+      align-items: center; gap: 8px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--granate) 0%, var(--granate-light) 100%);
+      color: white; box-shadow: 0 4px 14px rgba(123,29,42,0.3);
+    }
+    .btn-primary:hover { transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .btn svg { width: 16px; height: 16px; }
+
+    .alert-banner {
+      display: none; padding: 12px 16px; border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 500; align-items: center; gap: 10px; margin-bottom: 16px;
+    }
+    .alert-banner.show { display: flex; }
+    .alert-success { background: #F0FFF4; color: var(--success); border: 1px solid #BBF7D0; }
+    .alert-error { background: #FFF5F5; color: var(--error); border: 1px solid #FECACA; }
+
+    /* ── PERSONAL TABLE ──────────────────────────────────── */
+    .turno-badge {
+      display: inline-block; padding: 3px 8px; border-radius: 6px;
+      font-size: 11px; font-weight: 700;
+    }
+    .turno-Mañana { background: #FFF8DC; color: #854D0E; }
+    .turno-Tarde { background: #EEF2FF; color: #4338CA; }
+    .turno-Partido { background: #F0FDF4; color: #166534; }
+    .turno-Cierre { background: #FFF1F2; color: #881337; }
+
+    /* ── SKELETON ────────────────────────────────────────── */
+    .skeleton { background: linear-gradient(90deg, #EDE0D0 25%, #E0D0BE 50%, #EDE0D0 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 8px; }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* ── OVERLAY ─────────────────────────────────────────── */
+    .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 40; }
+    .sidebar-overlay.show { display: block; }
+    @media (min-width: 900px) { .sidebar-overlay { display: none !important; } }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">
+        <img src="/logo.png" alt="Crosti" style="width: 28px; height: 28px; border-radius: 8px; object-fit: contain;">
+      </div>
+      <div>
+        <div class="sidebar-brand">CROSTI COOKIES</div>
+        <div class="sidebar-brand-sub">Franquiciado</div>
+      </div>
+    </div>
+    <div class="sidebar-user">
+      <div class="sidebar-user-name" id="sidebarUserName">–</div>
+      <div class="sidebar-user-role" id="sidebarTienda">–</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Cuadro de Mando</div>
+      <button class="nav-item active" data-tab="resumen" onclick="switchTab('resumen',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Resumen del Día
+      </button>
+      <button class="nav-item" data-tab="ventas" onclick="switchTab('ventas',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Ventas & Análisis
+      </button>
+      <button class="nav-item" data-tab="personal" onclick="switchTab('personal',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Control Personal
+      </button>
+      <div class="nav-section-label">Gestión Económica</div>
+      <button class="nav-item" data-tab="kpis" onclick="switchTab('kpis',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        KPIs Mensuales
+      </button>
+      <button class="nav-item" data-tab="facturas" onclick="switchTab('facturas',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Facturas Proveedores
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn-logout-side" id="btnLogout">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Cerrar sesión
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main-wrapper">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" id="menuToggle">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="page-title" id="pageTitle">Resumen del Día</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="date-badge" id="dateDisplay">–</span>
+        <span class="tienda-chip" id="tiendaChip">–</span>
+      </div>
+    </header>
+
+    <main class="content">
+
+      <!-- ══ RESUMEN DEL DÍA ══ -->
+      <div class="tab-panel active" id="panel-resumen">
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Ventas netas</div>
+            <div class="kpi-value" id="kpiVentas">–</div>
+            <div class="kpi-sub" id="kpiVentasSub">–</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Nº Tickets</div>
+            <div class="kpi-value" id="kpiTickets">–</div>
+            <div class="kpi-sub" id="kpiTicketsSub">Ticket medio –</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Mermas €</div>
+            <div class="kpi-value" id="kpiMermas">–</div>
+            <div class="kpi-sub" id="kpiMermasSub">–</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Horas-Hombre</div>
+            <div class="kpi-value" id="kpiHoras">–</div>
+            <div class="kpi-sub" id="kpiHorasSub">–</div>
+          </div>
+        </div>
+
+        <!-- Curva de ventas por hora -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">📈 Ventas por hora — Hoy</div>
+          </div>
+          <div class="chart-container">
+            <canvas id="ventasHoraChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Top Productos -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">🏆 Top 5 Productos — Hoy</div>
+          </div>
+          <div class="data-table-wrap">
+            <table id="topProductosTable">
+              <thead><tr><th>#</th><th>Producto</th><th>Unidades</th><th>Ventas €</th></tr></thead>
+              <tbody id="topProductosBody">
+                <tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted)">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ VENTAS & ANÁLISIS ══ -->
+      <div class="tab-panel" id="panel-ventas">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">📊 Evolución diaria del mes</div>
+            <input type="month" id="mesSelector" class="field-input" style="width:auto;padding:6px 10px;font-size:12px">
+          </div>
+          <div class="chart-container" style="height:260px">
+            <canvas id="ventasMesChart"></canvas>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">🧮 Food Cost Real vs Teórico</div>
+          </div>
+          <div id="foodCostList" style="padding:4px 0">
+            <div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">Cargando food cost...</div>
+          </div>
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--crema-dark)">
+            <div style="display:flex;align-items:center;gap:16px;font-size:12px;color:var(--text-muted)">
+              <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:var(--success);display:inline-block"></span>Dentro objetivo</span>
+              <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:var(--warning);display:inline-block"></span>Límite superior</span>
+              <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:var(--error);display:inline-block"></span>Fuera objetivo</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ CONTROL PERSONAL ══ -->
+      <div class="tab-panel" id="panel-personal">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">👥 Personal en turno — Hoy</div>
+            <div id="kpiVentasHora" style="font-size:13px;color:var(--text-muted);">KPI: – €/h·h</div>
+          </div>
+          <div class="data-table-wrap">
+            <table id="personalTable">
+              <thead><tr><th>Operario</th><th>Turno</th><th>Entrada</th><th>Salida</th><th>Horas</th><th>€/hora</th></tr></thead>
+              <tbody id="personalBody">
+                <tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted)">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Registrar turno manual -->
+        <div class="chart-card">
+          <div class="chart-header"><div class="chart-title">⏱ Registrar Turno</div></div>
+          <div class="alert-banner" id="alertTurno"></div>
+          <form id="turnoForm" class="form-grid">
+            <div class="form-grid form-grid-2" style="grid-template-columns:1fr 1fr;gap:14px">
+              <div class="field-group">
+                <label class="field-label">Turno *</label>
+                <select class="field-input" id="turnoTipo">
+                  <option>Mañana</option><option>Tarde</option><option>Partido</option><option>Cierre</option>
+                </select>
+              </div>
+              <div class="field-group">
+                <label class="field-label">Hora entrada *</label>
+                <input type="time" class="field-input" id="turnoEntrada">
+              </div>
+              <div class="field-group">
+                <label class="field-label">Hora salida</label>
+                <input type="time" class="field-input" id="turnoSalida">
+              </div>
+              <div class="field-group">
+                <label class="field-label">Ventas del periodo (€)</label>
+                <input type="number" class="field-input" id="turnoVentas" min="0" step="0.01" placeholder="0.00">
+              </div>
+            </div>
+            <button type="button" class="btn btn-primary" id="btnSaveTurno" onclick="guardarTurno()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>
+              Guardar Turno
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- ══ KPIs MENSUALES ══ -->
+      <div class="tab-panel" id="panel-kpis">
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Ventas del mes</div>
+            <div class="kpi-value" id="kpiMesVentas">–</div>
+            <div class="kpi-sub">total neto €</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Compras mes</div>
+            <div class="kpi-value" id="kpiMesCompras">–</div>
+            <div class="kpi-sub">facturas proveedor</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Food Cost Real</div>
+            <div class="kpi-value" id="kpiFoodCostReal" style="font-size:24px">–</div>
+            <div class="kpi-sub">objetivo 18–28%</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Días operativos</div>
+            <div class="kpi-value" id="kpiDiasOp">–</div>
+            <div class="kpi-sub">con ventas registradas</div>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">📅 Ventas diarias del mes</div>
+            <input type="month" id="mesSelectorKPI" class="field-input" style="width:auto;padding:6px 10px;font-size:12px">
+          </div>
+          <div class="chart-container" style="height:200px">
+            <canvas id="kpiMesChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ FACTURAS PROVEEDORES ══ -->
+      <div class="tab-panel" id="panel-facturas">
+        <div class="chart-card">
+          <div class="chart-header"><div class="chart-title">➕ Registrar Factura</div></div>
+          <div class="alert-banner" id="alertFactura"></div>
+          <form id="facturaForm">
+            <div class="form-grid form-grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+              <div class="field-group" style="grid-column:1/-1">
+                <label class="field-label">Proveedor *</label>
+                <input type="text" class="field-input" id="facProv" placeholder="Nombre del proveedor" required>
+              </div>
+              <div class="field-group">
+                <label class="field-label">Nº Factura *</label>
+                <input type="text" class="field-input" id="facNum" placeholder="F-2027-001" required>
+              </div>
+              <div class="field-group">
+                <label class="field-label">Fecha Factura *</label>
+                <input type="date" class="field-input" id="facFecha" required>
+              </div>
+              <div class="field-group">
+                <label class="field-label">Ingrediente</label>
+                <select class="field-input" id="facIngrediente">
+                  <option value="">— General / Varios —</option>
+                  <option value="ING-001">Harina T55</option>
+                  <option value="ING-002">Mantequilla 82%</option>
+                  <option value="ING-009">Chips Chocolate</option>
+                  <option value="ING-015">Masa IQF Clásica</option>
+                  <option value="ING-016">Masa IQF Deluxe</option>
+                  <option value="ING-017">Soda Prebiótica</option>
+                  <option value="ING-018">Café Green Bean</option>
+                </select>
+              </div>
+              <div class="field-group">
+                <label class="field-label">Importe Total (€) *</label>
+                <input type="number" class="field-input" id="facTotal" min="0" step="0.01" placeholder="0.00" required>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>
+              Registrar Factura
+            </button>
+          </form>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+  // ─── AUTH GUARD ──────────────────────────────────────────
+  const token = localStorage.getItem('cc_token');
+  const rol = localStorage.getItem('cc_rol');
+  const tienda = localStorage.getItem('cc_tienda');
+  const nombre = localStorage.getItem('cc_nombre');
+  if (!token || !['FRANQUICIADO','ADMIN'].includes(rol)) window.location.href = './index.html';
+
+  // ─── UI INIT ─────────────────────────────────────────────
+  document.getElementById('sidebarUserName').textContent = nombre || '–';
+  document.getElementById('sidebarTienda').textContent = tienda || '–';
+  document.getElementById('tiendaChip').textContent = tienda || '–';
+
+  const now = new Date();
+  const mesActual = now.toISOString().slice(0,7);
+  document.getElementById('dateDisplay').textContent = now.toLocaleDateString('es-ES', {weekday:'short',day:'2-digit',month:'short'});
+  document.getElementById('mesSelector').value = mesActual;
+  document.getElementById('mesSelectorKPI').value = mesActual;
+  document.getElementById('facFecha').value = now.toISOString().split('T')[0];
+
+  const API = (path, opts = {}) => fetch(path, {
+    ...opts,
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', ...(opts.headers || {}) }
+  });
+
+  // ─── SIDEBAR MOBILE ──────────────────────────────────────
+  document.getElementById('menuToggle').onclick = () => {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('sidebarOverlay').classList.toggle('show');
+  };
+  document.getElementById('sidebarOverlay').onclick = () => {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebarOverlay').classList.remove('show');
+  };
+
+  // ─── TABS ────────────────────────────────────────────────
+  const PAGE_TITLES = { resumen:'Resumen del Día', ventas:'Ventas & Análisis', personal:'Control Personal', kpis:'KPIs Mensuales', facturas:'Facturas Proveedores' };
+  function switchTab(tab, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    document.getElementById('panel-' + tab).classList.add('active');
+    if (btn) btn.classList.add('active');
+    document.getElementById('pageTitle').textContent = PAGE_TITLES[tab] || tab;
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebarOverlay').classList.remove('show');
+    // Lazy load
+    if (tab === 'ventas') cargarVentasMes();
+    if (tab === 'kpis') cargarKPIsMes();
+  }
+
+  // ─── LOGOUT ──────────────────────────────────────────────
+  document.getElementById('btnLogout').onclick = async () => {
+    await fetch('/api/auth/logout', { method:'POST', headers:{'Authorization':`Bearer ${token}`}}).catch(()=>{});
+    localStorage.clear(); window.location.href = './index.html';
+  };
+
+  // ─── CHART DEFAULTS ──────────────────────────────────────
+  Chart.defaults.font.family = "'Outfit', sans-serif";
+  Chart.defaults.color = '#8B6B72';
+  const GRANATE = '#7B1D2A'; const GOLD = '#C9A84C'; const CREMA = '#FFF8F0';
+
+  // ─── CARGAR DASHBOARD DÍA ───────────────────────────────
+  let ventasHoraChart, ventasMesChart, kpiMesChart;
+
+  async function cargarDashboard() {
+    const fecha = now.toISOString().split('T')[0];
+    try {
+      const res = await API(`/api/dashboard/tienda/${tienda}?fecha=${fecha}`);
+      const d = await res.json();
+
+      // KPIs
+      const k = d.kpi || {};
+      document.getElementById('kpiVentas').textContent = k.ventas_netas_eu ? `${k.ventas_netas_eu.toFixed(2)}€` : '0.00€';
+      document.getElementById('kpiVentasSub').textContent = `${k.unidades_vendidas || 0} unidades vendidas`;
+      document.getElementById('kpiTickets').textContent = k.num_tickets || 0;
+      document.getElementById('kpiTicketsSub').textContent = `Ticket medio: ${(k.ticket_medio || 0).toFixed(2)}€`;
+      document.getElementById('kpiMermas').textContent = k.mermas_eu ? `${k.mermas_eu.toFixed(2)}€` : '0.00€';
+      document.getElementById('kpiHoras').textContent = k.horas_hombre ? `${k.horas_hombre}h` : '–';
+      if (k.ventas_netas_eu && k.horas_hombre) {
+        document.getElementById('kpiHorasSub').textContent = `${(k.ventas_netas_eu / k.horas_hombre).toFixed(2)}€/h·h`;
+      }
+
+      // Curva ventas por hora
+      const horas = Array.from({length:24}, (_, i) => i);
+      const ventasH = d.ventas_hora || [];
+      const ventasMap = Object.fromEntries(ventasH.map(v => [v.hora, v.ventas_eu]));
+      const ventasData = horas.map(h => ventasMap[h] || 0);
+
+      if (ventasHoraChart) ventasHoraChart.destroy();
+      ventasHoraChart = new Chart(document.getElementById('ventasHoraChart'), {
+        type: 'bar',
+        data: {
+          labels: horas.map(h => `${String(h).padStart(2,'0')}h`),
+          datasets: [{
+            label: 'Ventas €',
+            data: ventasData,
+            backgroundColor: horas.map(h => ventasMap[h] ? `rgba(123,29,42,0.85)` : `rgba(123,29,42,0.12)`),
+            borderRadius: 6, borderSkipped: false,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+            y: { grid: { color: '#F0E8DC' }, ticks: { callback: v => `${v}€` } }
+          }
+        }
+      });
+
+      // Top Productos
+      const tbody = document.getElementById('topProductosBody');
+      tbody.innerHTML = (d.top_productos || []).map((p, i) => `
+        <tr>
+          <td><strong>${i+1}</strong></td>
+          <td>${p.nombre}</td>
+          <td>${p.unidades}</td>
+          <td><strong>${(p.ventas_eu||0).toFixed(2)}€</strong></td>
+        </tr>
+      `).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px">Sin ventas registradas hoy</td></tr>';
+
+      // Personal
+      const pbody = document.getElementById('personalBody');
+      pbody.innerHTML = (d.personal || []).map(p => `
+        <tr>
+          <td><strong>${p.nombre}</strong></td>
+          <td><span class="turno-badge turno-${p.turno}">${p.turno}</span></td>
+          <td>${p.hora_entrada || '–'}</td>
+          <td>${p.hora_salida || '🟢 Activo'}</td>
+          <td>${p.horas_trabajadas ? p.horas_trabajadas.toFixed(1)+'h' : '–'}</td>
+          <td>${p.kpi_ventas_hora ? (p.kpi_ventas_hora).toFixed(2)+'€' : '–'}</td>
+        </tr>
+      `).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px">Sin turnos registrados hoy</td></tr>';
+
+      if (k.ventas_netas_eu && k.horas_hombre) {
+        document.getElementById('kpiVentasHora').textContent = `KPI: ${(k.ventas_netas_eu/k.horas_hombre).toFixed(2)} €/h·h`;
+      }
+
+    } catch (e) {
+      console.error('Error dashboard:', e);
+    }
+  }
+
+  // ─── VENTAS MES ──────────────────────────────────────────
+  async function cargarVentasMes() {
+    const mes = document.getElementById('mesSelector').value;
+    try {
+      const res = await API(`/api/kpis/mensual/${tienda}?mes=${mes}`);
+      const d = await res.json();
+      const dias = (d.ventas_diarias || []).map(v => v.fecha.slice(8));
+      const ventas = (d.ventas_diarias || []).map(v => v.ventas_eu);
+
+      if (ventasMesChart) ventasMesChart.destroy();
+      ventasMesChart = new Chart(document.getElementById('ventasMesChart'), {
+        type: 'line',
+        data: {
+          labels: dias,
+          datasets: [{
+            label: 'Ventas €',
+            data: ventas,
+            borderColor: GRANATE, backgroundColor: 'rgba(123,29,42,0.08)',
+            borderWidth: 2.5, fill: true, tension: 0.4,
+            pointBackgroundColor: GRANATE, pointRadius: 4,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false } },
+            y: { grid: { color: '#F0E8DC' }, ticks: { callback: v => `${v}€` } }
+          }
+        }
+      });
+
+      // Food Cost list (estático por ahora, se cruza con escandallos en backend)
+      const FC_DATA = [
+        { nombre: 'Cookie Clásica', pct: 20.5, min: 18, max: 22 },
+        { nombre: 'Cookie Deluxe', pct: 27.1, min: 24, max: 28 },
+        { nombre: 'Soda Prebiótica', pct: 36.8, min: 30, max: 40 },
+        { nombre: 'Pack 4 Clásicas', pct: 19.2, min: 18, max: 22 },
+      ];
+      document.getElementById('foodCostList').innerHTML = FC_DATA.map(fc => {
+        const cls = fc.pct > fc.max ? 'bad' : fc.pct > (fc.max - 2) ? 'warn' : 'ok';
+        const color = cls === 'bad' ? 'var(--error)' : cls === 'warn' ? 'var(--warning)' : 'var(--success)';
+        return `
+          <div class="food-cost-row">
+            <div class="fc-name">${fc.nombre}</div>
+            <div class="fc-bar-wrap"><div class="fc-bar ${cls}" style="width:${Math.min(fc.pct/40*100,100)}%"></div></div>
+            <div class="fc-pct" style="color:${color}">${fc.pct}%</div>
+            <div style="font-size:10px;color:var(--text-muted);min-width:70px;text-align:right">obj. ${fc.min}–${fc.max}%</div>
+          </div>
+        `;
+      }).join('');
+    } catch {}
+  }
+
+  // ─── KPIs MENSUALES ──────────────────────────────────────
+  async function cargarKPIsMes() {
+    const mes = document.getElementById('mesSelectorKPI').value;
+    try {
+      const res = await API(`/api/kpis/mensual/${tienda}?mes=${mes}`);
+      const d = await res.json();
+      const r = d.resumen || {};
+      document.getElementById('kpiMesVentas').textContent = `${(r.ventas_total_eu||0).toFixed(2)}€`;
+      document.getElementById('kpiMesCompras').textContent = `${(r.compras_total_eu||0).toFixed(2)}€`;
+      document.getElementById('kpiDiasOp').textContent = r.dias_con_ventas || 0;
+
+      const fc = r.food_cost_real_pct || 0;
+      const fcEl = document.getElementById('kpiFoodCostReal');
+      fcEl.textContent = `${fc}%`;
+      fcEl.className = 'kpi-value ' + (fc > 28 ? 'danger' : fc > 22 ? 'warning-val' : 'positive');
+
+      const dias = (d.ventas_diarias || []).map(v => v.fecha.slice(8));
+      const ventas = (d.ventas_diarias || []).map(v => v.ventas_eu);
+      if (kpiMesChart) kpiMesChart.destroy();
+      kpiMesChart = new Chart(document.getElementById('kpiMesChart'), {
+        type: 'bar',
+        data: {
+          labels: dias,
+          datasets: [{ label: '€', data: ventas, backgroundColor: `rgba(123,29,42,0.75)`, borderRadius: 4 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { x: { grid: { display: false } }, y: { grid: { color: '#F0E8DC' }, ticks: { callback: v => `${v}€` } } }
+        }
+      });
+    } catch {}
+  }
+
+  // ─── GUARDAR TURNO ───────────────────────────────────────
+  async function guardarTurno() {
+    const btn = document.getElementById('btnSaveTurno');
+    const alert = document.getElementById('alertTurno');
+    btn.disabled = true;
+    try {
+      const res = await API('/api/personal/turno', {
+        method: 'POST',
+        body: JSON.stringify({
+          id_operario: localStorage.getItem('cc_sub') || '',
+          fecha: now.toISOString().split('T')[0],
+          turno: document.getElementById('turnoTipo').value,
+          hora_entrada: document.getElementById('turnoEntrada').value,
+          hora_salida: document.getElementById('turnoSalida').value || undefined,
+          ventas_periodo: parseFloat(document.getElementById('turnoVentas').value) || 0,
+        })
+      });
+      alert.className = 'alert-banner ' + (res.ok ? 'alert-success show' : 'alert-error show');
+      alert.textContent = res.ok ? '✅ Turno registrado.' : '❌ Error al guardar turno.';
+    } catch {
+      alert.className = 'alert-banner alert-error show';
+      alert.textContent = '❌ Error de red.';
+    } finally { btn.disabled = false; }
+  }
+
+  // ─── FACTURA FORM ────────────────────────────────────────
+  document.getElementById('facturaForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const alert = document.getElementById('alertFactura');
+    try {
+      const res = await API('/api/facturas', {
+        method: 'POST',
+        body: JSON.stringify({
+          proveedor: document.getElementById('facProv').value,
+          numero_factura: document.getElementById('facNum').value,
+          fecha_factura: document.getElementById('facFecha').value,
+          id_ingrediente: document.getElementById('facIngrediente').value || null,
+          total_factura: parseFloat(document.getElementById('facTotal').value),
+        })
+      });
+      if (res.ok) {
+        alert.className = 'alert-banner alert-success show';
+        alert.textContent = '✅ Factura registrada correctamente.';
+        document.getElementById('facturaForm').reset();
+        document.getElementById('facFecha').value = now.toISOString().split('T')[0];
+      } else {
+        const err = await res.json();
+        alert.className = 'alert-banner alert-error show';
+        alert.textContent = '❌ ' + (err.error || 'Error al guardar factura.');
+      }
+    } catch {
+      alert.className = 'alert-banner alert-error show';
+      alert.textContent = '❌ Error de red.';
+    }
+  };
+
+  // ─── MONTH SELECTORS ─────────────────────────────────────
+  document.getElementById('mesSelector').onchange = cargarVentasMes;
+  document.getElementById('mesSelectorKPI').onchange = cargarKPIsMes;
+
+  // ─── INIT ────────────────────────────────────────────────
+  cargarDashboard();
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+</script>
+</body>
+</html>

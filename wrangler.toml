@@ -1,0 +1,20 @@
+name = "crosti-cookies-pwa"
+compatibility_date = "2024-03-20"
+pages_build_output_dir = "."
+
+# D1 Database — Base de datos relacional principal
+[[d1_databases]]
+binding = "CC_DB"
+database_name = "crosti-cookies-db"
+database_id = "6f15ac7d-adb5-4051-8a94-41373b9130e0"
+
+# R2 Bucket — Almacenamiento de fotos de mermas
+[[r2_buckets]]
+binding = "CC_IMAGES"
+bucket_name = "crosti-cookies-mermas"
+
+# Variables de entorno (JWT_SECRET debe configurarse en el Dashboard CF)
+[vars]
+ENVIRONMENT = "production"
+APP_NAME = "Crosti Cookies PWA"
+MAX_MERMA_PCT = "2.5"

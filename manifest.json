@@ -1,0 +1,36 @@
+{
+  "name": "Crosti Cookies",
+  "short_name": "Crosti",
+  "description": "Sistema de Gestión Corporativa de la cadena de franquicias Crosti Cookies. Plan de horneado JIT, control de mermas, KPIs y CRM.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#FFF8F0",
+  "theme_color": "#7B1D2A",
+  "lang": "es",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "./favicon.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Plan de Horneado",
+      "short_name": "Horneado",
+      "description": "Ver el plan JIT de hornadas del día",
+      "url": "./dashboard-operario.html#horneado",
+      "icons": [{ "src": "https://placehold.co/96x96/7B1D2A/C9A84C?text=🍪", "sizes": "96x96" }]
+    },
+    {
+      "name": "Registrar Merma",
+      "short_name": "Merma",
+      "description": "Acceso rápido al registro de mermas",
+      "url": "./dashboard-operario.html#mermas",
+      "icons": [{ "src": "https://placehold.co/96x96/7B1D2A/E8C96A?text=📊", "sizes": "96x96" }]
+    }
+  ]
+}

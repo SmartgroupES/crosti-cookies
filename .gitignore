@@ -1,5 +1,7 @@
+# Crosti Cookies — .gitignore
 node_modules/
-.env
-.DS_Store
-dist/
 .wrangler/
+*.log
+.env
+.env.local
+.DS_Store

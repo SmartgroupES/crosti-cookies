@@ -1,0 +1,3242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  
+  <link rel="apple-touch-icon" href="/favicon.png">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Crosti Cookies — Panel Administrador Central. Panel de control global consolidado: todas las tiendas, escandallos, CRM nacional y expansión.">
+  <meta name="theme-color" content="#7B1D2A">
+  <title>Admin Central — Crosti Cookies</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="manifest" href="./manifest.json">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --granate: #7B1D2A; --granate-deep: #5C1420; --granate-light: #9E2535;
+      --crema: #FFF8F0; --crema-dark: #F0E4CC; --blanco: #FFFFFF;
+      --gold: #C9A84C; --gold-light: #E8C96A; --gold-dark: #A07830;
+      --text-dark: #2D1B1E; --text-muted: #8B6B72;
+      --success: #22863a; --warning: #D97706; --error: #DC2626;
+      --bg: #EDE3D4; --radius: 16px; --radius-sm: 10px;
+      --sidebar-w: 260px;
+    }
+    body { font-family: 'Outfit', sans-serif; background: var(--bg); min-height: 100vh; }
+
+    /* ── LAYOUT ──────────────────────────────────────────── */
+    .layout { display: flex; min-height: 100vh; }
+    .sidebar {
+      width: var(--sidebar-w); background: var(--granate-deep);
+      position: fixed; top: 0; left: 0; bottom: 0; z-index: 50;
+      display: flex; flex-direction: column;
+      box-shadow: 4px 0 24px rgba(0,0,0,0.25);
+    }
+    .main-wrapper { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+
+    /* Sidebar logo */
+    .sb-logo { padding: 22px 22px 18px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .sb-logo-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .sb-icon { width: 46px; height: 46px; background: linear-gradient(135deg, rgba(201,168,76,0.3) 0%, rgba(201,168,76,0.1) 100%); border-radius: 13px; display: flex; align-items: center; justify-content: center; }
+    .sb-icon svg { width: 28px; height: 28px; fill: var(--gold); }
+    .sb-brand { color: var(--blanco); font-size: 13px; font-weight: 800; }
+    .sb-brand-sub { color: rgba(255,255,255,0.4); font-size: 9px; letter-spacing: 2px; text-transform: uppercase; margin-top: 1px; }
+    .sb-admin-badge {
+      background: linear-gradient(90deg, var(--gold-dark), var(--gold));
+      color: var(--granate-deep); font-size: 10px; font-weight: 800;
+      letter-spacing: 1px; text-transform: uppercase;
+      padding: 4px 10px; border-radius: 6px; display: inline-block;
+    }
+
+    .sb-nav { flex: 1; padding: 8px 0; overflow-y: auto; }
+    .sb-section { padding: 12px 22px 4px; font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.25); letter-spacing: 2px; text-transform: uppercase; }
+    .sb-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 22px; color: rgba(255,255,255,0.6);
+      cursor: pointer; font-size: 13px; font-weight: 500;
+      transition: all 0.2s; background: none; border: none; width: 100%;
+      position: relative;
+    }
+    .sb-item:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.9); }
+    .sb-item.active { background: rgba(201,168,76,0.12); color: var(--gold-light); }
+    .sb-item.active::before { content: ''; position: absolute; left: 0; top: 20%; bottom: 20%; width: 3px; background: var(--gold); border-radius: 0 2px 2px 0; }
+    .sb-item svg { width: 17px; height: 17px; flex-shrink: 0; }
+
+    .sb-footer { padding: 18px 22px; border-top: 1px solid rgba(255,255,255,0.08); }
+    .sb-user { color: rgba(255,255,255,0.8); font-size: 12px; font-weight: 600; margin-bottom: 10px; }
+    .sb-logout { display: flex; align-items: center; gap: 7px; color: rgba(255,255,255,0.45); font-size: 12px; cursor: pointer; background: none; border: none; }
+    .sb-logout:hover { color: rgba(255,255,255,0.8); }
+
+    /* ── TOPBAR ──────────────────────────────────────────── */
+    .topbar {
+      background: var(--blanco); height: 66px; padding: 0 28px;
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: 0 1px 10px rgba(0,0,0,0.06); position: sticky; top: 0; z-index: 40;
+    }
+    .topbar-title { font-size: 18px; font-weight: 800; color: var(--text-dark); }
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+    .date-pill { background: var(--crema-dark); color: var(--text-muted); font-size: 12px; font-weight: 600; padding: 5px 14px; border-radius: 20px; }
+    .admin-pill { background: linear-gradient(90deg, var(--granate), var(--granate-light)); color: white; font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 20px; letter-spacing: 0.5px; }
+
+    /* ── CONTENT ─────────────────────────────────────────── */
+    .content { padding: 28px; flex: 1; }
+    .tab-panel { display: none; animation: fadeIn 0.25s ease; }
+    .tab-panel.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ── GLOBAL KPI HEADER ──────────────────────────────── */
+    .global-kpi-bar {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 16px; margin-bottom: 28px;
+    }
+    .gkpi {
+      background: var(--blanco); border-radius: var(--radius); padding: 22px 20px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.05); position: relative; overflow: hidden;
+    }
+    .gkpi::after {
+      content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(90deg, var(--granate), var(--gold));
+    }
+    .gkpi-label { font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
+    .gkpi-value { font-size: 32px; font-weight: 900; color: var(--text-dark); line-height: 1; }
+    .gkpi-sub { font-size: 12px; color: var(--text-muted); margin-top: 5px; }
+    .gkpi-icon { position: absolute; top: 18px; right: 18px; font-size: 26px; opacity: 0.15; }
+
+    /* ── TIENDA CARDS ────────────────────────────────────── */
+    .tienda-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 28px; }
+    .tienda-card {
+      background: var(--blanco); border-radius: var(--radius); overflow: hidden;
+      box-shadow: 0 3px 14px rgba(0,0,0,0.07); transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .tienda-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+    .tienda-card-header {
+      padding: 18px 20px 14px;
+      background: linear-gradient(135deg, var(--granate-deep) 0%, var(--granate) 100%);
+      position: relative;
+    }
+    .tienda-card-header.madrid { background: linear-gradient(135deg, #1A3A5C 0%, #2563EB 100%); }
+    .tienda-card-header.valencia { background: linear-gradient(135deg, #3D1E00 0%, #D97706 100%); }
+    .tienda-id { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); letter-spacing: 1.5px; }
+    .tienda-nombre { font-size: 15px; font-weight: 800; color: white; margin-top: 2px; }
+    .tienda-perfil { font-size: 11px; color: rgba(255,255,255,0.55); margin-top: 3px; }
+    .tienda-status { position: absolute; top: 16px; right: 16px; display: flex; align-items: center; gap: 5px; font-size: 10px; color: rgba(255,255,255,0.7); }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #4ADE80; animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+    .tienda-card-body { padding: 16px 20px; }
+    .tienda-kpi-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--crema-dark); }
+    .tienda-kpi-row:last-child { border-bottom: none; }
+    .tienda-kpi-label { font-size: 12px; color: var(--text-muted); }
+    .tienda-kpi-value { font-size: 13px; font-weight: 700; color: var(--text-dark); }
+    .tienda-forecast { margin-top: 10px; padding: 8px 12px; background: var(--crema); border-radius: 8px; font-size: 11px; color: var(--text-muted); font-style: italic; }
+
+    /* ── CHART CARD ──────────────────────────────────────── */
+    .chart-card { background: var(--blanco); border-radius: var(--radius); padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); margin-bottom: 22px; }
+    .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .chart-title { font-size: 15px; font-weight: 700; color: var(--text-dark); }
+
+    /* ── TABLE ───────────────────────────────────────────── */
+    .data-table-wrap { overflow-x: auto; border-radius: var(--radius-sm); }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: var(--crema-dark); color: var(--text-muted); font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 10px 14px; text-align: left; white-space: nowrap; }
+    td { padding: 11px 14px; color: var(--text-dark); border-bottom: 1px solid #F5EDE0; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #FDFAF6; }
+
+    /* ── FOOD COST BADGE ─────────────────────────────────── */
+    .fc-badge { display: inline-block; padding: 3px 9px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+    .fc-ok { background: #E8F5E9; color: var(--success); }
+    .fc-warn { background: #FFF8E1; color: var(--warning); }
+    .fc-bad { background: #FFEBEE; color: var(--error); }
+
+    /* ── EDIT INPUT ──────────────────────────────────────── */
+    .edit-input { padding: 4px 8px; border: 1.5px solid #E5D5C5; border-radius: 6px; font-family: 'Outfit'; font-size: 13px; width: 80px; text-align: center; }
+    .edit-input:focus { border-color: var(--granate); outline: none; }
+    .save-btn { padding: 4px 10px; background: var(--granate); color: white; border: none; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; margin-left: 4px; }
+    .save-btn:hover { background: var(--granate-light); }
+
+    /* ── CRM SEGMENT BADGE ───────────────────────────────── */
+    .seg-badge { display: inline-block; padding: 3px 9px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+    .seg-Nuevo { background: #E3F2FD; color: #1565C0; }
+    .seg-Ocasional { background: #F3E5F5; color: #6A1B9A; }
+
+    /* ── ESCANDALLOS STICKY HEADER ───────────────────────── */
+    .escandallos-card {
+      /* Remove flex and height so it scrolls with the page naturally */
+      position: relative;
+    }
+    .escandallos-card .chart-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: var(--blanco);
+      padding: 24px 24px 20px 24px;
+      margin: -24px -24px 20px -24px;
+      border-bottom: 1px solid var(--crema-dark);
+      border-radius: var(--radius) var(--radius) 0 0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03); /* slight shadow to pop */
+    }
+    .escandallos-card .data-table-wrap {
+      overflow: visible; /* crucial: removes scroll bounds so sticky th works against viewport */
+    }
+    .escandallos-card th {
+      position: sticky;
+      top: 70px; /* stick right below the chart-header */
+      z-index: 10;
+      background: var(--crema-dark);
+      box-shadow: 0 1px 0 #E5D5C5; /* Separation line */
+    }
+    .seg-Frecuente { background: #E8F5E9; color: #2E7D32; }
+    .seg-VIP\ Premium { background: linear-gradient(90deg,#C9A84C20,#E8C96A30); color: var(--gold-dark); border: 1px solid var(--gold); }
+    .seg-Inactivo { background: #FAFAFA; color: #9E9E9E; }
+
+    /* ── EXPANSION TIMELINE ──────────────────────────────── */
+    .timeline { position: relative; padding-left: 28px; }
+    .timeline::before { content: ''; position: absolute; left: 10px; top: 0; bottom: 0; width: 2px; background: linear-gradient(180deg, var(--granate), var(--gold)); border-radius: 1px; }
+    .tl-item { position: relative; margin-bottom: 24px; }
+    .tl-dot { position: absolute; left: -22px; top: 4px; width: 14px; height: 14px; border-radius: 50%; border: 2.5px solid var(--granate); background: var(--blanco); }
+    .tl-dot.done { background: var(--success); border-color: var(--success); }
+    .tl-dot.next { background: var(--gold); border-color: var(--gold); }
+    .tl-dot.future { background: var(--bg); border-color: rgba(123,29,42,0.3); }
+    .tl-date { font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 3px; }
+    .tl-title { font-size: 15px; font-weight: 700; color: var(--text-dark); }
+    .tl-desc { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+    .tl-chip { display: inline-block; margin-top: 6px; padding: 3px 9px; border-radius: 6px; font-size: 10px; font-weight: 700; }
+    .tl-chip-green { background: #E8F5E9; color: var(--success); }
+    .tl-chip-blue { background: #E3F2FD; color: #1565C0; }
+    .tl-chip-orange { background: #FFF3E0; color: var(--warning); }
+    .tl-chip-gold { background: rgba(201,168,76,0.15); color: var(--gold-dark); }
+
+    /* ── BUTTONS ─────────────────────────────────────────── */
+    .btn { padding: 10px 18px; border: none; border-radius: var(--radius-sm); font-family: 'Outfit'; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 7px; }
+    .btn-primary { background: linear-gradient(135deg, var(--granate) 0%, var(--granate-light) 100%); color: white; box-shadow: 0 4px 12px rgba(123,29,42,0.28); }
+    .btn-primary:hover { transform: translateY(-1px); }
+    .btn-gold { background: linear-gradient(135deg, var(--gold-dark), var(--gold)); color: var(--granate-deep); }
+    .btn svg { width: 15px; height: 15px; }
+
+    /* ── SKELETON ────────────────────────────────────────── */
+    .skeleton { background: linear-gradient(90deg, #EDE0D0 25%, #E0D0BE 50%, #EDE0D0 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 8px; }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* ── FILTER BAR ──────────────────────────────────────── */
+    .filter-bar { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; align-items: center; }
+    .filter-input { padding: 8px 12px; border: 1.5px solid #E5D5C5; border-radius: 8px; font-family: 'Outfit'; font-size: 13px; background: var(--blanco); outline: none; }
+    .filter-input:focus { border-color: var(--granate); }
+
+    /* ── INGREDIENTES CRUD ───────────────────────────────── */
+    .ing-action-btn {
+      padding: 5px 10px; border: none; border-radius: 7px;
+      font-family: 'Outfit'; font-size: 11px; font-weight: 700;
+      cursor: pointer; transition: all 0.18s; display: inline-flex; align-items: center; gap: 5px;
+    }
+    .ing-btn-edit { background: rgba(201,168,76,0.15); color: var(--gold-dark); }
+    .ing-btn-edit:hover { background: rgba(201,168,76,0.3); }
+    .ing-btn-del { background: rgba(220,38,38,0.1); color: var(--error); margin-left: 5px; }
+    .ing-btn-del:hover { background: rgba(220,38,38,0.2); }
+
+    /* ── MODAL OVERLAY ───────────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(30,10,12,0.55);
+      backdrop-filter: blur(4px); z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--blanco); border-radius: 20px; padding: 32px;
+      width: 540px; max-width: 94vw; box-shadow: 0 24px 60px rgba(0,0,0,0.22);
+      transform: translateY(20px) scale(0.97);
+      transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
+      max-height: 90vh; overflow-y: auto;
+    }
+    .modal-overlay.open .modal { transform: translateY(0) scale(1); }
+    .modal-title {
+      font-size: 17px; font-weight: 800; color: var(--text-dark);
+      margin-bottom: 22px; display: flex; align-items: center; gap: 10px;
+    }
+    .modal-title-icon {
+      width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, var(--granate), var(--granate-light)); font-size: 17px;
+    }
+    .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+    .modal-field { display: flex; flex-direction: column; gap: 5px; }
+    .modal-field.full { grid-column: 1 / -1; }
+    .modal-label { font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; }
+    .modal-input {
+      padding: 10px 12px; border: 1.5px solid #E5D5C5; border-radius: 9px;
+      font-family: 'Outfit'; font-size: 13px; background: var(--crema); outline: none;
+      transition: border-color 0.15s;
+    }
+    .modal-input:focus { border-color: var(--granate); background: white; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+    .modal-btn-cancel {
+      padding: 10px 20px; border: 1.5px solid #E5D5C5; border-radius: 9px;
+      background: none; font-family: 'Outfit'; font-size: 13px; font-weight: 600;
+      color: var(--text-muted); cursor: pointer; transition: all 0.15s;
+    }
+    .modal-btn-cancel:hover { border-color: var(--text-muted); color: var(--text-dark); }
+    .modal-btn-save {
+      padding: 10px 22px; border: none; border-radius: 9px;
+      background: linear-gradient(135deg, var(--granate), var(--granate-light));
+      color: white; font-family: 'Outfit'; font-size: 13px; font-weight: 700;
+      cursor: pointer; box-shadow: 0 4px 14px rgba(123,29,42,0.28); transition: all 0.15s;
+    }
+    .modal-btn-save:hover { transform: translateY(-1px); }
+    .modal-btn-danger {
+      padding: 10px 22px; border: none; border-radius: 9px;
+      background: linear-gradient(135deg, #B91C1C, #DC2626);
+      color: white; font-family: 'Outfit'; font-size: 13px; font-weight: 700;
+      cursor: pointer; box-shadow: 0 4px 14px rgba(220,38,38,0.3); transition: all 0.15s;
+    }
+    .modal-btn-danger:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .modal-btn-danger:not(:disabled):hover { transform: translateY(-1px); }
+    .del-warning {
+      background: #FFF5F5; border: 1.5px solid #FECACA; border-radius: 10px;
+      padding: 14px 16px; margin-bottom: 18px; font-size: 13px; color: var(--error);
+      display: flex; gap: 10px; align-items: flex-start;
+    }
+    .del-warning svg { flex-shrink: 0; margin-top: 1px; }
+    .confirm-name-input {
+      margin-top: 14px; padding: 10px 12px; width: 100%;
+      border: 2px solid #FECACA; border-radius: 9px;
+      font-family: 'Outfit'; font-size: 13px; outline: none; transition: border-color 0.15s;
+    }
+    .confirm-name-input:focus { border-color: var(--error); }
+    .confirm-name-input.match { border-color: var(--error); background: #FFF5F5; }
+    .ing-cat-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 5px;
+      font-size: 10px; font-weight: 700; background: var(--crema-dark); color: var(--text-muted);
+    }
+
+    /* ── ESCANDALLO ACTION BUTTONS ───────────────────────── */
+    .esc-btn-view { background: rgba(34,134,58,0.1); color: var(--success); }
+    .esc-btn-view:hover { background: rgba(34,134,58,0.2); }
+    .esc-btn-edit { background: rgba(201,168,76,0.15); color: var(--gold-dark); }
+    .esc-btn-edit:hover { background: rgba(201,168,76,0.3); }
+    .esc-btn-del { background: rgba(220,38,38,0.1); color: var(--error); }
+    .esc-btn-del:hover { background: rgba(220,38,38,0.2); }
+
+    /* ── ESCANDALLO MODAL (WIDE) ────────────────────────── */
+    .modal-wide { width: 780px; }
+    .modal-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--crema-dark); margin-bottom: 20px; }
+    .modal-tab {
+      padding: 9px 18px; font-size: 13px; font-weight: 700;
+      background: none; border: none; cursor: pointer;
+      color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -2px;
+      transition: all 0.15s;
+    }
+    .modal-tab.active { color: var(--granate); border-bottom-color: var(--granate); }
+    .modal-tab-pane { display: none; }
+    .modal-tab-pane.active { display: block; }
+    .receta-linea {
+      display: grid; grid-template-columns: 1fr 90px 60px 90px auto;
+      gap: 8px; align-items: center; padding: 8px 0;
+      border-bottom: 1px solid #F5EDE0;
+    }
+    .receta-linea:last-child { border-bottom: none; }
+    .receta-linea-header { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; }
+    .receta-input { padding: 6px 8px; border: 1.5px solid #E5D5C5; border-radius: 7px; font-family: 'Outfit'; font-size: 12px; width: 100%; }
+    .receta-input:focus { border-color: var(--granate); outline: none; }
+    .receta-del-btn { width: 28px; height: 28px; border: none; border-radius: 7px; background: rgba(220,38,38,0.1); color: var(--error); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .receta-del-btn:hover { background: rgba(220,38,38,0.25); }
+    .add-linea-row { display: grid; grid-template-columns: 1fr 90px 60px 90px auto; gap: 8px; align-items: center; padding: 10px 0; }
+    .fc-summary {
+      display: flex; gap: 20px; padding: 14px 16px; background: var(--crema);
+      border-radius: 10px; margin-bottom: 16px; font-size: 13px;
+    }
+    .fc-summary-item { display: flex; flex-direction: column; gap: 2px; }
+    .fc-summary-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.8px; }
+    .fc-summary-val { font-size: 18px; font-weight: 900; color: var(--text-dark); }
+
+    /* ── HAMBURGER / MOBILE SIDEBAR ────────────────────── */
+    .hamburger {
+      display: none; flex-direction: column; gap: 5px; cursor: pointer;
+      background: none; border: none; padding: 4px;
+    }
+    .hamburger span { display: block; width: 22px; height: 2.5px; background: var(--text-dark); border-radius: 2px; transition: all 0.3s; }
+    .sb-backdrop {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+      z-index: 49; backdrop-filter: blur(2px);
+    }
+    .sb-backdrop.visible { display: block; }
+
+    /* ── RESPONSIVE BREAKPOINTS ────────────────────────── */
+    @media (max-width: 1024px) {
+      :root { --sidebar-w: 230px; }
+      .global-kpi-bar { grid-template-columns: repeat(2, 1fr); }
+      .tienda-grid { grid-template-columns: repeat(2, 1fr); }
+      .content { padding: 20px; }
+      .topbar { padding: 0 20px; }
+      .modal-wide { width: 92vw; }
+    }
+
+    @media (max-width: 768px) {
+      :root { --sidebar-w: 260px; }
+
+      /* Sidebar: oculto por defecto en móvil */
+      .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+        z-index: 100;
+      }
+      .sidebar.sb-open { transform: translateX(0); }
+      .main-wrapper { margin-left: 0; }
+
+      /* Topbar móvil */
+      .topbar { padding: 0 14px; height: 56px; }
+      .topbar-title { font-size: 15px; }
+      .hamburger { display: flex; }
+      .date-pill { display: none; }
+      .admin-pill { font-size: 10px; padding: 4px 8px; }
+      .topbar-right input[type=date] { display: none; }
+
+      /* Content */
+      .content { padding: 14px; }
+      .chart-card { padding: 16px; }
+      .chart-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+
+      /* KPI grids */
+      .global-kpi-bar { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+      .gkpi { padding: 16px 14px; }
+      .gkpi-value { font-size: 24px; }
+      .tienda-grid { grid-template-columns: 1fr; gap: 12px; }
+
+      /* Tables: horizontal scroll */
+      .data-table-wrap { border-radius: 8px; -webkit-overflow-scrolling: touch; }
+      table { font-size: 12px; min-width: 520px; }
+      th, td { padding: 9px 10px; }
+
+      /* Buttons */
+      .btn { padding: 9px 14px; font-size: 12px; }
+      .ing-action-btn { padding: 5px 8px; font-size: 10px; }
+
+      /* Filter bar */
+      .filter-bar { gap: 8px; }
+      .filter-input { font-size: 12px; padding: 7px 10px; }
+
+      /* Timeline */
+      div[style*="grid-template-columns:1fr 340px"] { grid-template-columns: 1fr !important; }
+
+      /* Forms */
+      .modal-grid { grid-template-columns: 1fr !important; }
+      form[style*="grid-template-columns:1fr 1fr 1fr"] { grid-template-columns: 1fr !important; }
+
+      /* Modal — full screen slide-up en móvil */
+      .modal-overlay {
+        align-items: flex-end;
+        padding: 0;
+      }
+      .modal {
+        width: 100%; max-width: 100%; border-radius: 20px 20px 0 0;
+        max-height: 92dvh; padding: 24px 16px;
+        transform: translateY(100%);
+        transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+      }
+      .modal-overlay.open .modal { transform: translateY(0); }
+      .modal-wide { width: 100%; }
+
+      /* Receta lineas */
+      .receta-linea { grid-template-columns: 1fr 70px 50px 70px auto; gap: 5px; }
+      .add-linea-row { grid-template-columns: 1fr 70px 50px 70px auto; gap: 5px; }
+
+      /* Modal actions */
+      .modal-actions { flex-direction: column-reverse; gap: 8px; }
+      .modal-btn-cancel, .modal-btn-save, .modal-btn-danger { width: 100%; justify-content: center; text-align: center; }
+
+      /* FC summary */
+      .fc-summary { flex-direction: column; gap: 10px; }
+    }
+
+    @media (max-width: 480px) {
+      .global-kpi-bar { grid-template-columns: 1fr; }
+      .gkpi-value { font-size: 28px; }
+      .modal-tabs { overflow-x: auto; }
+    }
+
+    /* ── VISTA POR TIENDA ────────────────────────────────── */
+    .tienda-selector-bar {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 24px;
+      background: var(--blanco); border-radius: var(--radius); padding: 16px 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    .tienda-selector-label { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; }
+    .tienda-select-btn {
+      padding: 8px 16px; border: 2px solid transparent; border-radius: 10px;
+      font-family: 'Outfit'; font-size: 13px; font-weight: 700; cursor: pointer;
+      background: var(--crema); color: var(--text-muted); transition: all 0.2s;
+    }
+    .tienda-select-btn:hover { background: var(--crema-dark); color: var(--text-dark); }
+    .tienda-select-btn.active {
+      background: linear-gradient(135deg, var(--granate), var(--granate-light));
+      color: white; border-color: transparent;
+      box-shadow: 0 4px 12px rgba(123,29,42,0.3);
+    }
+    .tienda-view-tabs {
+      display: flex; gap: 0; border-bottom: 2px solid var(--crema-dark); margin-bottom: 20px;
+    }
+    .tienda-view-tab {
+      padding: 9px 16px; font-size: 13px; font-weight: 700;
+      background: none; border: none; cursor: pointer;
+      color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -2px;
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .tienda-view-tab:hover { color: var(--text-dark); }
+    .tienda-view-tab.active { color: var(--granate); border-bottom-color: var(--granate); }
+    .tienda-sub-panel { display: none; animation: fadeIn 0.3s ease; }
+    .tienda-sub-panel.active { display: block; }
+    .tv-kpi-grid {
+      display: grid; gap: 14px; margin-bottom: 20px;
+      grid-template-columns: repeat(2, 1fr);
+    }
+    @media (min-width: 768px) { .tv-kpi-grid { grid-template-columns: repeat(4, 1fr); } }
+    .tv-kpi-card {
+      background: var(--blanco); border-radius: var(--radius); padding: 18px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: relative; overflow: hidden;
+    }
+    .tv-kpi-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--granate), var(--granate-light));
+    }
+    .tv-kpi-label { font-size: 11px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 6px; }
+    .tv-kpi-value { font-size: 26px; font-weight: 800; color: var(--text-dark); line-height: 1; }
+    .tv-kpi-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+    .tv-chart-card {
+      background: var(--blanco); border-radius: var(--radius);
+      padding: 22px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 18px;
+    }
+    .tv-chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .tv-chart-title { font-size: 14px; font-weight: 700; color: var(--text-dark); }
+    .tv-chart-container { position: relative; height: 220px; }
+    .tv-turno-badge {
+      display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;
+    }
+    .tv-turno-Mañana { background: #FFF8DC; color: #854D0E; }
+    .tv-turno-Tarde { background: #EEF2FF; color: #4338CA; }
+    .tv-turno-Partido { background: #F0FDF4; color: #166534; }
+    .tv-turno-Cierre { background: #FFF1F2; color: #881337; }
+    .tv-fc-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--crema-dark); }
+    .tv-fc-row:last-child { border-bottom: none; }
+    .tv-fc-name { font-size: 13px; font-weight: 600; color: var(--text-dark); flex: 1; }
+    .tv-fc-bar-wrap { flex: 2; height: 8px; background: var(--crema-dark); border-radius: 4px; overflow: hidden; }
+    .tv-fc-bar { height: 100%; border-radius: 4px; transition: width 0.8s ease; }
+    .tv-fc-bar.ok { background: linear-gradient(90deg, var(--success), #38d17f); }
+    .tv-fc-bar.warn { background: linear-gradient(90deg, var(--warning), #f59e0b); }
+    .tv-fc-bar.bad { background: linear-gradient(90deg, var(--error), #ef4444); }
+    .tv-fc-pct { font-size: 13px; font-weight: 700; min-width: 44px; text-align: right; }
+    .tv-alert-banner {
+      display: none; padding: 12px 16px; border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 500; align-items: center; gap: 10px; margin-bottom: 16px;
+    }
+    .tv-alert-banner.show { display: flex; }
+    .tv-alert-success { background: #F0FFF4; color: var(--success); border: 1px solid #BBF7D0; }
+    .tv-alert-error { background: #FFF5F5; color: var(--error); border: 1px solid #FECACA; }
+    .tv-field-group { display: flex; flex-direction: column; gap: 5px; }
+    .tv-field-label { font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; text-transform: uppercase; }
+    .tv-field-input {
+      padding: 10px 12px; border: 1.5px solid #E5D5C5; border-radius: var(--radius-sm);
+      background: var(--crema); font-family: 'Outfit'; font-size: 14px;
+      color: var(--text-dark); outline: none; transition: border-color 0.2s; -webkit-appearance: none;
+    }
+    .tv-field-input:focus { border-color: var(--granate); }
+    .tv-no-tienda {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 60px 20px; color: var(--text-muted); gap: 12px;
+    }
+    .tv-no-tienda svg { width: 48px; height: 48px; opacity: 0.3; }
+    .tv-no-tienda p { font-size: 14px; font-weight: 500; }
+    @media (max-width: 768px) {
+      .tienda-selector-bar { flex-wrap: wrap; gap: 8px; }
+      .tienda-view-tabs { overflow-x: auto; padding-bottom: 4px; }
+      .tienda-view-tab { font-size: 12px; padding: 8px 12px; }
+    }
+  </style>
+
+  <!-- LIBRERIAS PARA REPORTES -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+<!-- Backdrop para cerrar sidebar en móvil -->
+<div class="sb-backdrop" id="sbBackdrop" onclick="cerrarSidebar()"></div>
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-logo">
+      <div class="sb-logo-row">
+        <div class="sb-icon">
+          <img src="/logo.png" alt="Crosti" style="width: 28px; height: 28px; border-radius: 8px; object-fit: contain;">
+        </div>
+        <div>
+          <div class="sb-brand">CROSTI COOKIES</div>
+          <div class="sb-brand-sub">Sistema Central</div>
+        </div>
+      </div>
+      <span class="sb-admin-badge">⚡ Admin Central · BCN</span>
+    </div>
+
+    <nav class="sb-nav">
+      <div class="sb-section">Dashboard</div>
+      <button class="sb-item active" onclick="switchTab('global', this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Panel Global
+      </button>
+
+      <div class="sb-section">Operaciones</div>
+      <button class="sb-item" onclick="switchTab('escandallos', this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
+        Escandallos & Food Cost
+      </button>
+      <button class="sb-item" onclick="switchTab('almacen', this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+        Control de Almacén
+      </button>
+      <button class="sb-item" onclick="switchTab('ingredientes', this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Costes & Proveedores
+      </button>
+
+      <div class="sb-section">Comercial</div>
+      <button class="sb-item" onclick="switchTab('crm', this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        CRM Nacional VIP Club
+      </button>
+      <button class="sb-item" onclick="switchTab('expansion', this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        Plan Expansión 2027–31
+      </button>
+
+      <div class="sb-section">Tiendas</div>
+      <button class="sb-item" onclick="switchTab('tienda-view', this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Vista por Tienda
+      </button>
+
+      <div class="sb-section">Sistema</div>
+      <button class="sb-item" onclick="switchTab('usuarios', this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Gestión de Usuarios
+      </button>
+      <button class="sb-item" onclick="switchTab('reportes', this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Centro de Reportes
+      </button>
+    </nav>
+
+    <div class="sb-footer">
+      <div class="sb-user" id="sbUserName">Administrador Central</div>
+      <button class="sb-logout" id="btnLogout">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Cerrar sesión
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN WRAPPER -->
+  <div class="main-wrapper">
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="hamburger" id="btnHamburger" onclick="toggleSidebar()" aria-label="Menú">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="topbar-title" id="pageTitle">Panel Global Consolidado</div>
+      </div>
+      <div class="topbar-right">
+        <input type="date" id="fechaGlobal" style="padding:5px 10px;border:1.5px solid #E5D5C5;border-radius:8px;font-family:'Outfit';font-size:12px;background:var(--crema)">
+        <span class="date-pill" id="datePill">–</span>
+        <span class="admin-pill">⚡ Admin · BCN</span>
+      </div>
+    </header>
+
+    <main class="content">
+
+      <!-- ══ PANEL GLOBAL ══ -->
+      <div class="tab-panel active" id="panel-global">
+        <!-- KPIs globales -->
+        <div class="global-kpi-bar">
+          <div class="gkpi">
+            <span class="gkpi-icon">💰</span>
+            <div class="gkpi-label">Ventas Totales Red</div>
+            <div class="gkpi-value" id="gkpiVentas">–</div>
+            <div class="gkpi-sub" id="gkpiVentasSub">–</div>
+          </div>
+          <div class="gkpi">
+            <span class="gkpi-icon">🧾</span>
+            <div class="gkpi-label">Total Tickets</div>
+            <div class="gkpi-value" id="gkpiTickets">–</div>
+            <div class="gkpi-sub" id="gkpiTicketsSub">–</div>
+          </div>
+          <div class="gkpi">
+            <span class="gkpi-icon">🏪</span>
+            <div class="gkpi-label">Tiendas Activas</div>
+            <div class="gkpi-value" id="gkpiTiendas">–</div>
+            <div class="gkpi-sub">Red Crosti Cookies</div>
+          </div>
+          <div class="gkpi">
+            <span class="gkpi-icon">📊</span>
+            <div class="gkpi-label">Ticket Medio Red</div>
+            <div class="gkpi-value" id="gkpiTicketMedio">–</div>
+            <div class="gkpi-sub">promedio consolidado</div>
+          </div>
+        </div>
+
+        <!-- Tiendas side-by-side -->
+        <div class="tienda-grid" id="tiendaCards">
+          <!-- BCN-01 skeleton -->
+          <div class="tienda-card">
+            <div class="tienda-card-header">
+              <div class="tienda-id">BCN-01</div>
+              <div class="tienda-nombre">Barcelona (Piloto)</div>
+              <div class="tienda-perfil">Boutique Regalo</div>
+              <div class="tienda-status"><div class="status-dot"></div>Operativa</div>
+            </div>
+            <div class="tienda-card-body" id="kpi-BCN-01">
+              <div class="skeleton" style="height:14px;margin-bottom:8px"></div>
+              <div class="skeleton" style="height:14px;width:80%;margin-bottom:8px"></div>
+              <div class="skeleton" style="height:14px;width:60%"></div>
+            </div>
+          </div>
+          <!-- MAD-01 -->
+          <div class="tienda-card">
+            <div class="tienda-card-header madrid">
+              <div class="tienda-id">MAD-01</div>
+              <div class="tienda-nombre">Madrid · Salamanca</div>
+              <div class="tienda-perfil">Boutique Regalo</div>
+              <div class="tienda-status"><div class="status-dot" style="background:#FCD34D;animation:none"></div>En apertura</div>
+            </div>
+            <div class="tienda-card-body" id="kpi-MAD-01">
+              <div class="tienda-kpi-row"><span class="tienda-kpi-label">Estado</span><span class="tienda-kpi-value">Apertura Q1 2027</span></div>
+              <div class="tienda-kpi-row"><span class="tienda-kpi-label">Franquiciado</span><span class="tienda-kpi-value">Por asignar</span></div>
+              <div class="tienda-forecast">📋 Obras previstas finalización Feb 2027</div>
+            </div>
+          </div>
+          <!-- VAL-01 -->
+          <div class="tienda-card">
+            <div class="tienda-card-header valencia">
+              <div class="tienda-id">VAL-01</div>
+              <div class="tienda-nombre">Valencia · Centro</div>
+              <div class="tienda-perfil">High Traffic Impulse</div>
+              <div class="tienda-status"><div class="status-dot" style="background:#FCD34D;animation:none"></div>En apertura</div>
+            </div>
+            <div class="tienda-card-body" id="kpi-VAL-01">
+              <div class="tienda-kpi-row"><span class="tienda-kpi-label">Estado</span><span class="tienda-kpi-value">Apertura Q2 2027</span></div>
+              <div class="tienda-kpi-row"><span class="tienda-kpi-label">Franquiciado</span><span class="tienda-kpi-value">Por asignar</span></div>
+              <div class="tienda-forecast">🏗️ Negociación local comercial activa</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chart consolidado -->
+        <div class="chart-card">
+          <div class="chart-header"><div class="chart-title">📈 Food Cost Teórico por Producto — Red Nacional</div></div>
+          <div style="position:relative;height:240px"><canvas id="foodCostChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- ══ ESCANDALLOS ══ -->
+      <div class="tab-panel" id="panel-escandallos">
+        <div class="chart-card escandallos-card">
+          <div class="chart-header">
+            <div class="chart-title">🧮 Escandallos — Recetas y Food Cost</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn" style="background:var(--crema-dark);color:var(--text-muted);font-size:12px" onclick="recargarEscandallos()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.8"/></svg>
+                Actualizar
+              </button>
+              <button class="btn btn-primary" onclick="abrirModalNuevaReceta()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Nueva Receta
+              </button>
+            </div>
+          </div>
+          <div class="data-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Producto</th><th>PVP</th><th>Coste Prod.</th><th>Food Cost %</th><th>Objetivo</th><th>Estado</th><th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="escandallосBody">
+                <tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted)">Cargando escandallos...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ MODAL DETALLE/EDICIÓN ESCANDALLO ═══ -->
+      <div class="modal-overlay" id="modalEscOverlay">
+        <div class="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="modalEscTitle">
+          <div class="modal-title">
+            <div class="modal-title-icon">🧮</div>
+            <span id="modalEscTitle">Detalle Receta</span>
+            <button onclick="cerrarModalEsc()" style="margin-left:auto;background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);line-height:1">&times;</button>
+          </div>
+          <div class="fc-summary" id="escFcSummary">
+            <div class="fc-summary-item"><div class="fc-summary-label">Producto</div><div class="fc-summary-val" id="escFcNombre" style="font-size:14px;font-weight:700">—</div></div>
+            <div class="fc-summary-item"><div class="fc-summary-label">PVP Directo</div><div class="fc-summary-val" id="escFcPvp">—</div></div>
+            <div class="fc-summary-item"><div class="fc-summary-label">Coste Total</div><div class="fc-summary-val" id="escFcCoste">—</div></div>
+            <div class="fc-summary-item"><div class="fc-summary-label">Food Cost %</div><div class="fc-summary-val" id="escFcPct">—</div></div>
+          </div>
+          <div class="modal-tabs">
+            <button class="modal-tab active" onclick="switchEscTab('lineas',this)">🧂 Ingredientes</button>
+            <button class="modal-tab" onclick="switchEscTab('producto',this)">📋 Datos Producto</button>
+          </div>
+          <!-- Tab ingredientes -->
+          <div class="modal-tab-pane active" id="escTabLineas">
+            <div id="escLineasAlert" style="display:none;margin-bottom:10px;padding:8px 12px;border-radius:8px;font-size:12px"></div>
+            <div class="receta-linea receta-linea-header">
+              <span>Ingrediente</span><span>Cantidad</span><span>Unidad</span><span>Fase</span><span></span>
+            </div>
+            <div id="escLineasBody"></div>
+            <div id="addLineaRow" class="add-linea-row" style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--crema-dark)">
+              <select class="receta-input" id="newLineaIng"><option value="">Ingrediente...</option></select>
+              <input class="receta-input" type="number" id="newLineaCantidad" placeholder="0" min="0" step="0.001">
+              <select class="receta-input" id="newLineaUnidad">
+                <option value="kg">kg</option><option value="g">g</option>
+                <option value="L">L</option><option value="ml">ml</option><option value="ud">ud</option>
+              </select>
+              <select class="receta-input" id="newLineaFase">
+                <option value="Masa">Masa</option><option value="Acabado">Acabado</option>
+                <option value="Packaging">Packaging</option><option value="Bebida">Bebida</option>
+              </select>
+              <button class="modal-btn-save" style="padding:6px 12px;font-size:12px;white-space:nowrap" onclick="agregarLineaEsc()">+ Añadir</button>
+            </div>
+          </div>
+          <!-- Tab datos producto -->
+          <div class="modal-tab-pane" id="escTabProducto">
+            <div class="modal-grid" style="grid-template-columns:1fr 1fr">
+              <div class="modal-field"><label class="modal-label">Nombre *</label><input class="modal-input" type="text" id="escNombre"></div>
+              <div class="modal-field"><label class="modal-label">Categoría *</label>
+                <select class="modal-input" id="escCategoria">
+                  <option>Clasica</option><option>Deluxe</option><option>Soda Prebiotica</option>
+                  <option>Cafe Especialidad</option><option>Pack Regalo</option>
+                </select>
+              </div>
+              <div class="modal-field"><label class="modal-label">PVP Directo (€) *</label><input class="modal-input" type="number" id="escPvp" min="0" step="0.01"></div>
+              <div class="modal-field"><label class="modal-label">PVP Uber Eats (€)</label><input class="modal-input" type="number" id="escPvpUber" min="0" step="0.01"></div>
+              <div class="modal-field"><label class="modal-label">Peso unidad (g)</label><input class="modal-input" type="number" id="escPeso" min="0"></div>
+              <div class="modal-field"><label class="modal-label">Food Cost Obj. Mín %</label><input class="modal-input" type="number" id="escFcMin" min="0" step="0.1"></div>
+              <div class="modal-field"><label class="modal-label">Food Cost Obj. Máx %</label><input class="modal-input" type="number" id="escFcMax" min="0" step="0.1"></div>
+              <div class="modal-field" style="grid-column:1/-1"><label class="modal-label">Descripción</label><input class="modal-input" type="text" id="escDesc"></div>
+            </div>
+          </div>
+          <div id="modalEscAlert" style="display:none;margin-top:14px;padding:10px 14px;border-radius:9px;font-size:13px"></div>
+          <div class="modal-actions" style="margin-top:18px">
+            <button class="modal-btn-cancel" onclick="cerrarModalEsc()">Cancelar</button>
+            <button class="modal-btn-save" id="btnGuardarEsc" onclick="guardarEscandallo()">Guardar cambios</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ MODAL NUEVA RECETA ═══ -->
+      <div class="modal-overlay" id="modalNuevaRecetaOverlay">
+        <div class="modal modal-wide" role="dialog" aria-modal="true">
+          <div class="modal-title">
+            <div class="modal-title-icon">✚</div>
+            <span>Nueva Receta</span>
+            <button onclick="cerrarModalNuevaReceta()" style="margin-left:auto;background:none;border:none;font-size:22px;cursor:pointer;color:var(--text-muted);line-height:1">&times;</button>
+          </div>
+          <div id="nuevaRecetaPaso1">
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;font-weight:600">Paso 1 de 2 — Datos del producto</div>
+            <div class="modal-grid" style="grid-template-columns:1fr 1fr">
+              <div class="modal-field"><label class="modal-label">ID Producto * (ej: CC-XXX-001)</label><input class="modal-input" type="text" id="nrId" placeholder="CC-XXX-001" style="text-transform:uppercase"></div>
+              <div class="modal-field"><label class="modal-label">Nombre *</label><input class="modal-input" type="text" id="nrNombre"></div>
+              <div class="modal-field"><label class="modal-label">Categoría *</label>
+                <select class="modal-input" id="nrCategoria">
+                  <option value="">Seleccionar...</option>
+                  <option>Clasica</option><option>Deluxe</option><option>Soda Prebiotica</option>
+                  <option>Cafe Especialidad</option><option>Pack Regalo</option>
+                </select>
+              </div>
+              <div class="modal-field"><label class="modal-label">PVP Directo (€) *</label><input class="modal-input" type="number" id="nrPvp" min="0" step="0.01"></div>
+              <div class="modal-field"><label class="modal-label">PVP Uber Eats (€)</label><input class="modal-input" type="number" id="nrPvpUber" min="0" step="0.01"></div>
+              <div class="modal-field"><label class="modal-label">Food Cost Obj. Mín %</label><input class="modal-input" type="number" id="nrFcMin" min="0" step="0.1"></div>
+              <div class="modal-field"><label class="modal-label">Food Cost Obj. Máx %</label><input class="modal-input" type="number" id="nrFcMax" min="0" step="0.1"></div>
+              <div class="modal-field"><label class="modal-label">Peso unidad (g)</label><input class="modal-input" type="number" id="nrPeso" min="0"></div>
+              <div class="modal-field" style="grid-column:1/-1"><label class="modal-label">Descripción</label><input class="modal-input" type="text" id="nrDesc"></div>
+            </div>
+            <div id="modalNrAlert1" style="display:none;margin-bottom:10px;padding:8px 12px;border-radius:8px;font-size:12px"></div>
+            <div class="modal-actions"><button class="modal-btn-cancel" onclick="cerrarModalNuevaReceta()">Cancelar</button><button class="modal-btn-save" onclick="nrPaso2()">Siguiente → Ingredientes</button></div>
+          </div>
+          <div id="nuevaRecetaPaso2" style="display:none">
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;font-weight:600">Paso 2 de 2 — Ingredientes de la receta</div>
+            <div class="receta-linea receta-linea-header"><span>Ingrediente</span><span>Cantidad</span><span>Unidad</span><span>Fase</span><span></span></div>
+            <div id="nrLineasList"></div>
+            <div class="add-linea-row" style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--crema-dark)">
+              <select class="receta-input" id="nrNewIng"><option value="">Ingrediente...</option></select>
+              <input class="receta-input" type="number" id="nrNewCantidad" placeholder="0" min="0" step="0.001">
+              <select class="receta-input" id="nrNewUnidad">
+                <option value="kg">kg</option><option value="g">g</option>
+                <option value="L">L</option><option value="ml">ml</option><option value="ud">ud</option>
+              </select>
+              <select class="receta-input" id="nrNewFase">
+                <option value="Masa">Masa</option><option value="Acabado">Acabado</option>
+                <option value="Packaging">Packaging</option><option value="Bebida">Bebida</option>
+              </select>
+              <button class="modal-btn-save" style="padding:6px 12px;font-size:12px;white-space:nowrap" onclick="nrAddLinea()">+ Añadir</button>
+            </div>
+            <div id="modalNrAlert" style="display:none;margin-top:10px;padding:8px 12px;border-radius:8px;font-size:12px"></div>
+            <div class="modal-actions" style="margin-top:18px">
+              <button class="modal-btn-cancel" onclick="nrVolver()">← Volver</button>
+              <button class="modal-btn-save" id="btnCrearReceta" onclick="crearNuevaReceta()">Crear Receta</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ MODAL ELIMINAR RECETA (DOBLE CONFIRMACIÓN) ═══ -->
+      <div class="modal-overlay" id="modalDelRecetaOverlay">
+        <div class="modal" role="dialog" aria-modal="true" style="width:460px">
+          <div class="modal-title">
+            <div class="modal-title-icon" style="background:linear-gradient(135deg,#B91C1C,#DC2626)">🗑️</div>
+            <span>Eliminar Receta</span>
+          </div>
+          <div id="delRecetaPaso1">
+            <div class="del-warning">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <div>¿Eliminar la receta <strong id="delRecetaNombrePaso1"></strong>?<br>
+                <span style="font-size:12px;color:var(--text-muted);margin-top:4px;display:block">Se desactivará el producto y todas sus líneas de escandallo.</span>
+              </div>
+            </div>
+            <div class="modal-actions">
+              <button class="modal-btn-cancel" onclick="cerrarModalDelReceta()">Cancelar</button>
+              <button class="modal-btn-save" style="background:linear-gradient(135deg,#B91C1C,#DC2626);box-shadow:0 4px 14px rgba(220,38,38,0.3)" onclick="delRecetaPaso2()">Continuar →</button>
+            </div>
+          </div>
+          <div id="delRecetaPaso2" style="display:none">
+            <div class="del-warning">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <div>Escribe el nombre del producto para confirmar:<br>
+                <strong id="delRecetaNombrePaso2" style="display:block;margin-top:4px;font-family:monospace"></strong>
+              </div>
+            </div>
+            <input class="confirm-name-input" type="text" id="delRecetaInput" placeholder="Escribe el nombre para confirmar..." oninput="validarDelReceta()">
+            <div class="modal-actions" style="margin-top:18px">
+              <button class="modal-btn-cancel" onclick="cerrarModalDelReceta()">Cancelar</button>
+              <button class="modal-btn-danger" id="btnConfirmDelReceta" disabled onclick="confirmarEliminarReceta()">Confirmar eliminación</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ══ INGREDIENTES / COSTES ══ -->
+      <div class="tab-panel" id="panel-ingredientes">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">🧂 Gestión de Ingredientes — Catálogo Obrador BCN</div>
+            <button class="btn btn-primary" id="btnNuevoIng" onclick="abrirModalIng(null)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Nuevo Ingrediente
+            </button>
+          </div>
+          <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px">
+            Añade, modifica o elimina ingredientes del catálogo. El Food Cost teórico se recalcula automáticamente al actualizar precios.
+          </p>
+          <div class="filter-bar">
+            <input type="text" class="filter-input" id="ingSearch" placeholder="🔍 Buscar por nombre o categoría..." oninput="filtrarIngredientes()" style="flex:1;min-width:220px">
+            <select class="filter-input" id="ingFiltroCat" onchange="filtrarIngredientes()">
+              <option value="">Todas las categorías</option>
+              <option>Harina</option><option>Grasa</option><option>Azucar</option>
+              <option>Lacteo</option><option>Aditivo</option><option>Chocolate</option>
+              <option>Frutos Secos</option><option>Masa IQF</option>
+              <option>Bebida Base</option><option>Packaging</option>
+            </select>
+            <button class="btn" style="background:var(--crema-dark);color:var(--text-muted);font-size:12px" onclick="cargarIngredientes()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.8"/></svg>
+              Actualizar
+            </button>
+          </div>
+          <div class="data-table-wrap">
+            <table>
+              <thead><tr>
+                <th>ID</th><th>Ingrediente</th><th>Categoría</th><th>Proveedor</th>
+                <th>Unidad</th><th>Coste/U (€)</th><th>Stock Mín.</th><th>Acciones</th>
+              </tr></thead>
+              <tbody id="ingredientesBody">
+                <tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-muted)">Cargando ingredientes...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ MODAL CREAR / EDITAR INGREDIENTE ═══ -->
+      <div class="modal-overlay" id="modalIngOverlay">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalIngTitle">
+          <div class="modal-title">
+            <div class="modal-title-icon">🧂</div>
+            <span id="modalIngTitle">Nuevo Ingrediente</span>
+          </div>
+          <div id="modalIngAlert" style="display:none;margin-bottom:14px;padding:10px 14px;border-radius:9px;font-size:13px"></div>
+          <div class="modal-grid">
+            <div class="modal-field">
+              <label class="modal-label" for="ingId">ID Ingrediente *</label>
+              <input class="modal-input" type="text" id="ingId" placeholder="ING-026" maxlength="20">
+            </div>
+            <div class="modal-field">
+              <label class="modal-label" for="ingNombre">Nombre *</label>
+              <input class="modal-input" type="text" id="ingNombre" placeholder="Nombre del ingrediente">
+            </div>
+            <div class="modal-field">
+              <label class="modal-label" for="ingCategoria">Categoría *</label>
+              <select class="modal-input" id="ingCategoria">
+                <option value="">Seleccionar...</option>
+                <option>Harina</option><option>Grasa</option><option>Azucar</option>
+                <option>Lacteo</option><option>Aditivo</option><option>Chocolate</option>
+                <option>Frutos Secos</option><option>Masa IQF</option>
+                <option>Bebida Base</option><option>Packaging</option>
+              </select>
+            </div>
+            <div class="modal-field">
+              <label class="modal-label" for="ingProveedor">Proveedor</label>
+              <input class="modal-input" type="text" id="ingProveedor" placeholder="Nombre proveedor">
+            </div>
+            <div class="modal-field">
+              <label class="modal-label" for="ingUnidad">Unidad *</label>
+              <select class="modal-input" id="ingUnidad">
+                <option value="">Seleccionar...</option>
+                <option value="kg">kg</option>
+                <option value="g">g</option>
+                <option value="L">L</option>
+                <option value="ml">ml</option>
+                <option value="ud">ud</option>
+              </select>
+            </div>
+            <div class="modal-field">
+              <label class="modal-label" for="ingCoste">Coste / Unidad (€) *</label>
+              <input class="modal-input" type="number" id="ingCoste" placeholder="0.00" min="0" step="0.001">
+            </div>
+            <div class="modal-field">
+              <label class="modal-label" for="ingStock">Stock Seguridad Mín.</label>
+              <input class="modal-input" type="number" id="ingStock" placeholder="0" min="0" step="0.1">
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button class="modal-btn-cancel" onclick="cerrarModalIng()">Cancelar</button>
+            <button class="modal-btn-save" id="btnGuardarIng" onclick="guardarIngrediente()">Guardar Ingrediente</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ MODAL CONFIRMACIÓN ELIMINACIÓN ═══ -->
+      <div class="modal-overlay" id="modalDelOverlay">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalDelTitle" style="width:460px">
+          <div class="modal-title">
+            <div class="modal-title-icon" style="background:linear-gradient(135deg,#B91C1C,#DC2626)">🗑️</div>
+            <span id="modalDelTitle">Eliminar Ingrediente</span>
+          </div>
+          <!-- Paso 1 -->
+          <div id="delPaso1">
+            <div class="del-warning">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <div>
+                ¿Eliminar el ingrediente <strong id="delNombrePaso1"></strong>?<br>
+                <span style="font-size:12px;color:var(--text-muted);margin-top:4px;display:block">Esta acción lo desactivará del catálogo. Los escandallos que lo usen mantendrán el coste actual registrado.</span>
+              </div>
+            </div>
+            <div class="modal-actions">
+              <button class="modal-btn-cancel" onclick="cerrarModalDel()">Cancelar</button>
+              <button class="modal-btn-save" style="background:linear-gradient(135deg,#B91C1C,#DC2626);box-shadow:0 4px 14px rgba(220,38,38,0.3)" onclick="irDelPaso2()">Continuar →</button>
+            </div>
+          </div>
+          <!-- Paso 2 -->
+          <div id="delPaso2" style="display:none">
+            <div class="del-warning">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <div>
+                Para confirmar, escribe el nombre exacto del ingrediente:
+                <strong id="delNombrePaso2" style="display:block;margin-top:4px;font-family:monospace;letter-spacing:0.5px"></strong>
+              </div>
+            </div>
+            <input class="confirm-name-input" type="text" id="delConfirmInput"
+              placeholder="Escribe el nombre para confirmar..."
+              oninput="validarConfirmNombre()">
+            <div class="modal-actions" style="margin-top:18px">
+              <button class="modal-btn-cancel" onclick="cerrarModalDel()">Cancelar</button>
+              <button class="modal-btn-danger" id="btnConfirmDel" disabled onclick="confirmarEliminar()">Confirmar eliminación</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      
+      <!-- ══ CONTROL DE ALMACEN ══ -->
+      <div class="tab-panel" id="panel-almacen">
+        <div class="filter-bar">
+          <select id="almacenTiendaSelect" class="filter-input" onchange="cargarAlmacen()">
+            <option value="BCN-01">BCN-01 - Barcelona (Piloto)</option>
+            <option value="MAD-01">MAD-01 - Madrid</option>
+            <option value="VAL-01">VAL-01 - Valencia</option>
+          </select>
+          <button class="btn" onclick="cargarAlmacen()">↻ Actualizar</button>
+          <button class="btn btn-primary" onclick="abrirModalTransferir()">⇄ Transferir Stock</button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-top: 24px;">
+          <!-- ZONAS DE ALMACENAMIENTO -->
+          <div class="card">
+            <div class="card-title">❄️ Congelador (Masa IQF)</div>
+            <table class="table" id="almacenCongeladorTable">
+              <thead><tr><th>Item</th><th>Stock</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          
+          <div class="card">
+            <div class="card-title">🧊 Refrigerado & Seco</div>
+            <table class="table" id="almacenSecoTable">
+              <thead><tr><th>Item</th><th>Stock</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <div class="card">
+            <div class="card-title">⏳ Fermentación & Adecuación</div>
+            <table class="table" id="almacenTransitoTable">
+              <thead><tr><th>Item</th><th>Stock</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <div class="card">
+            <div class="card-title">🍪 Vitrina (Horneado)</div>
+            <table class="table" id="almacenVitrinaTable">
+              <thead><tr><th>Item</th><th>Stock</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 24px">
+          <div class="card-title">Libro de Movimientos Recientes</div>
+          <table class="table" id="almacenMovimientosTable">
+            <thead>
+              <tr><th>Fecha</th><th>Hora</th><th>Tipo</th><th>Origen</th><th>Destino</th><th>Item</th><th>Cant.</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Modal Transferir Stock -->
+      <div id="modalTransferir" class="modal">
+        <div class="modal-content" style="max-width: 400px">
+          <div class="modal-header">
+            <h3>Transferir Stock</h3>
+            <button class="modal-close" onclick="document.getElementById('modalTransferir').style.display='none'">&times;</button>
+          </div>
+          <div class="modal-body" style="display:flex; flex-direction:column; gap:12px; margin-top: 16px;">
+            <select id="trfItem" class="filter-input"></select>
+            
+            <div style="display:flex; gap:12px">
+              <div style="flex:1">
+                <label style="font-size:12px; color:var(--text-muted)">Origen</label>
+                <select id="trfOrigen" class="filter-input">
+                  <option value="CONGELADO">Congelador</option>
+                  <option value="TRANSITO">Fermentación</option>
+                  <option value="SECO">Almacén Seco</option>
+                  <option value="VITRINA">Vitrina</option>
+                </select>
+              </div>
+              <div style="flex:1">
+                <label style="font-size:12px; color:var(--text-muted)">Destino</label>
+                <select id="trfDestino" class="filter-input">
+                  <option value="TRANSITO">Fermentación</option>
+                  <option value="VITRINA">Vitrina</option>
+                  <option value="CONGELADO">Congelador</option>
+                  <option value="SECO">Almacén Seco</option>
+                </select>
+              </div>
+            </div>
+
+            <input type="number" id="trfCant" class="filter-input" placeholder="Cantidad" min="1">
+
+            <button class="btn btn-primary" style="width:100%" onclick="ejecutarTransferencia()">Confirmar Movimiento</button>
+          </div>
+        </div>
+      </div>
+
+      
+      <!-- ══ CENTRO DE REPORTES ══ -->
+      <div class="tab-panel" id="panel-reportes">
+        <div class="filter-bar">
+          <select id="repTiendaSelect" class="filter-input">
+            <option value="TODAS">Todas las tiendas (Consolidado)</option>
+            <option value="BCN-01">BCN-01 - Barcelona (Piloto)</option>
+            <option value="MAD-01">MAD-01 - Madrid</option>
+            <option value="VAL-01">VAL-01 - Valencia</option>
+          </select>
+          <input type="date" id="repDesde" class="filter-input">
+          <span style="font-size:12px;color:var(--text-muted)">hasta</span>
+          <input type="date" id="repHasta" class="filter-input">
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; margin-top: 24px;">
+          <!-- Tarjetas de Reportes -->
+          
+          <div class="card">
+            <div class="card-title">📈 Ventas Detalladas</div>
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Desglose de tickets, unidades vendidas y totales.</p>
+            <div style="display:flex;gap:8px">
+              <button class="btn" style="flex:1" onclick="consultarReporte('ventas', 'Ventas Detalladas')">👁️ Ver</button>
+              <button class="btn btn-primary" onclick="exportarPDF('ventas', 'Ventas Detalladas')">📄 PDF</button>
+              <button class="btn btn-primary" style="background:#22863a" onclick="exportarExcel('ventas', 'Ventas Detalladas')">📗 XLSX</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">📦 Trazabilidad Inventario</div>
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Libro mayor de movimientos (entradas, transferencias).</p>
+            <div style="display:flex;gap:8px">
+              <button class="btn" style="flex:1" onclick="consultarReporte('inventario', 'Trazabilidad Inventario')">👁️ Ver</button>
+              <button class="btn btn-primary" onclick="exportarPDF('inventario', 'Trazabilidad Inventario')">📄 PDF</button>
+              <button class="btn btn-primary" style="background:#22863a" onclick="exportarExcel('inventario', 'Trazabilidad Inventario')">📗 XLSX</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">🗑️ Control de Mermas</div>
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Análisis de mermas por motivo y producto.</p>
+            <div style="display:flex;gap:8px">
+              <button class="btn" style="flex:1" onclick="consultarReporte('mermas', 'Control de Mermas')">👁️ Ver</button>
+              <button class="btn btn-primary" onclick="exportarPDF('mermas', 'Control de Mermas')">📄 PDF</button>
+              <button class="btn btn-primary" style="background:#22863a" onclick="exportarExcel('mermas', 'Control de Mermas')">📗 XLSX</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">🧑‍🍳 Rendimiento de Personal</div>
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Horas trabajadas y ratio de ventas por hora.</p>
+            <div style="display:flex;gap:8px">
+              <button class="btn" style="flex:1" onclick="consultarReporte('personal', 'Rendimiento Personal')">👁️ Ver</button>
+              <button class="btn btn-primary" onclick="exportarPDF('personal', 'Rendimiento Personal')">📄 PDF</button>
+              <button class="btn btn-primary" style="background:#22863a" onclick="exportarExcel('personal', 'Rendimiento Personal')">📗 XLSX</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">📊 Food Cost Teórico</div>
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Comparativa teórica de escandallos y precios.</p>
+            <div style="display:flex;gap:8px">
+              <button class="btn" style="flex:1" onclick="consultarReporte('food_cost', 'Food Cost')">👁️ Ver</button>
+              <button class="btn btn-primary" onclick="exportarPDF('food_cost', 'Food Cost')">📄 PDF</button>
+              <button class="btn btn-primary" style="background:#22863a" onclick="exportarExcel('food_cost', 'Food Cost')">📗 XLSX</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">👥 CRM VIP Club</div>
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Listado de clientes segmentados y ticket medio.</p>
+            <div style="display:flex;gap:8px">
+              <button class="btn" style="flex:1" onclick="consultarReporte('crm', 'CRM Clientes')">👁️ Ver</button>
+              <button class="btn btn-primary" onclick="exportarPDF('crm', 'CRM Clientes')">📄 PDF</button>
+              <button class="btn btn-primary" style="background:#22863a" onclick="exportarExcel('crm', 'CRM Clientes')">📗 XLSX</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">🧾 Compras y Proveedores</div>
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Resumen de facturas y volumen de compra.</p>
+            <div style="display:flex;gap:8px">
+              <button class="btn" style="flex:1" onclick="consultarReporte('compras', 'Facturas de Compras')">👁️ Ver</button>
+              <button class="btn btn-primary" onclick="exportarPDF('compras', 'Facturas de Compras')">📄 PDF</button>
+              <button class="btn btn-primary" style="background:#22863a" onclick="exportarExcel('compras', 'Facturas de Compras')">📗 XLSX</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Modal Vista Previa de Reporte -->
+      <div id="modalReporte" class="modal">
+        <div class="modal-content" style="max-width: 900px; max-height: 80vh; overflow-y: auto;">
+          <div class="modal-header">
+            <h3 id="modalReporteTitulo">Vista Previa</h3>
+            <button class="modal-close" onclick="document.getElementById('modalReporte').style.display='none'">&times;</button>
+          </div>
+          <div class="modal-body" style="margin-top: 16px; overflow-x: auto;">
+            <table class="table" id="reportePreviewTable">
+              <thead><tr id="reportePreviewHead"></tr></thead>
+              <tbody id="reportePreviewBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ VISTA POR TIENDA ══ -->
+      <div class="tab-panel" id="panel-tienda-view">
+
+        <!-- Selector de tienda -->
+        <div class="tienda-selector-bar">
+          <span class="tienda-selector-label">🏪 Tienda:</span>
+          <div id="tvTiendaBtns" style="display:flex;gap:8px;flex-wrap:wrap">
+            <span style="font-size:13px;color:var(--text-muted)">Cargando tiendas...</span>
+          </div>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+            <label style="font-size:12px;color:var(--text-muted);font-weight:600">Fecha:</label>
+            <input type="date" id="tvFecha" class="filter-input" style="width:auto;padding:6px 10px;font-size:12px">
+          </div>
+        </div>
+
+        <!-- Estado vacío antes de seleccionar -->
+        <div id="tvEmpty" class="tv-no-tienda">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          <p>Selecciona una tienda para ver su panel completo</p>
+        </div>
+
+        <!-- Contenido de tienda seleccionada -->
+        <div id="tvContent" style="display:none">
+
+          <!-- Sub-tabs -->
+          <div class="tienda-view-tabs" id="tvSubTabs">
+            <button class="tienda-view-tab active" onclick="switchTiendaTab('tv-resumen', this)">📊 Resumen del Día</button>
+            <button class="tienda-view-tab" onclick="switchTiendaTab('tv-ventas', this)">📈 Ventas &amp; Análisis</button>
+            <button class="tienda-view-tab" onclick="switchTiendaTab('tv-personal', this)">👥 Control Personal</button>
+            <button class="tienda-view-tab" onclick="switchTiendaTab('tv-kpis', this)">📅 KPIs Mensuales</button>
+            <button class="tienda-view-tab" onclick="switchTiendaTab('tv-facturas', this)">🧾 Facturas</button>
+            <button class="tienda-view-tab" onclick="switchTiendaTab('tv-operario', this)" style="color:#DC2626;font-weight:800">🔴 Vista Operario</button>
+          </div>
+
+          <!-- ── Resumen del Día ── -->
+          <div class="tienda-sub-panel active" id="panel-tv-resumen">
+            <div class="tv-kpi-grid">
+              <div class="tv-kpi-card">
+                <div class="tv-kpi-label">Ventas netas</div>
+                <div class="tv-kpi-value" id="tvKpiVentas">–</div>
+                <div class="tv-kpi-sub" id="tvKpiVentasSub">–</div>
+              </div>
+              <div class="tv-kpi-card">
+                <div class="tv-kpi-label">Nº Tickets</div>
+                <div class="tv-kpi-value" id="tvKpiTickets">–</div>
+                <div class="tv-kpi-sub" id="tvKpiTicketsSub">Ticket medio –</div>
+              </div>
+              <div class="tv-kpi-card">
+                <div class="tv-kpi-label">Mermas €</div>
+                <div class="tv-kpi-value" id="tvKpiMermas">–</div>
+                <div class="tv-kpi-sub" id="tvKpiMermasSub">–</div>
+              </div>
+              <div class="tv-kpi-card">
+                <div class="tv-kpi-label">Horas-Hombre</div>
+                <div class="tv-kpi-value" id="tvKpiHoras">–</div>
+                <div class="tv-kpi-sub" id="tvKpiHorasSub">–</div>
+              </div>
+            </div>
+            <div class="tv-chart-card">
+              <div class="tv-chart-header"><div class="tv-chart-title">📈 Ventas por hora — Día seleccionado</div></div>
+              <div class="tv-chart-container"><canvas id="tvVentasHoraChart"></canvas></div>
+            </div>
+            <div class="tv-chart-card">
+              <div class="tv-chart-header"><div class="tv-chart-title">🏆 Top 5 Productos</div></div>
+              <div class="data-table-wrap">
+                <table>
+                  <thead><tr><th>#</th><th>Producto</th><th>Unidades</th><th>Ventas €</th></tr></thead>
+                  <tbody id="tvTopProductosBody">
+                    <tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted)">–</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Ventas & Análisis ── -->
+          <div class="tienda-sub-panel" id="panel-tv-ventas">
+            <div class="tv-chart-card">
+              <div class="tv-chart-header">
+                <div class="tv-chart-title">📊 Evolución diaria del mes</div>
+                <input type="month" id="tvMesSelector" class="filter-input" style="width:auto;padding:6px 10px;font-size:12px">
+              </div>
+              <div class="tv-chart-container" style="height:260px"><canvas id="tvVentasMesChart"></canvas></div>
+            </div>
+            <div class="tv-chart-card">
+              <div class="tv-chart-header"><div class="tv-chart-title">🧮 Food Cost Teórico por Producto</div></div>
+              <div id="tvFoodCostList" style="padding:4px 0">
+                <div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">Selecciona una tienda...</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── Control Personal ── -->
+          <div class="tienda-sub-panel" id="panel-tv-personal">
+            <div class="tv-chart-card">
+              <div class="tv-chart-header">
+                <div class="tv-chart-title">👥 Personal en turno — Día seleccionado</div>
+                <div id="tvKpiVentasHora" style="font-size:13px;color:var(--text-muted);">KPI: – €/h·h</div>
+              </div>
+              <div class="data-table-wrap">
+                <table>
+                  <thead><tr><th>Operario</th><th>Turno</th><th>Entrada</th><th>Salida</th><th>Horas</th><th>€/hora</th></tr></thead>
+                  <tbody id="tvPersonalBody">
+                    <tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted)">–</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="tv-chart-card">
+              <div class="tv-chart-header"><div class="tv-chart-title">⏱ Registrar Turno</div></div>
+              <div class="tv-alert-banner" id="tvAlertTurno"></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+                <div class="tv-field-group">
+                  <label class="tv-field-label">Turno *</label>
+                  <select class="tv-field-input" id="tvTurnoTipo">
+                    <option>Mañana</option><option>Tarde</option><option>Partido</option><option>Cierre</option>
+                  </select>
+                </div>
+                <div class="tv-field-group">
+                  <label class="tv-field-label">Hora entrada *</label>
+                  <input type="time" class="tv-field-input" id="tvTurnoEntrada">
+                </div>
+                <div class="tv-field-group">
+                  <label class="tv-field-label">Hora salida</label>
+                  <input type="time" class="tv-field-input" id="tvTurnoSalida">
+                </div>
+                <div class="tv-field-group">
+                  <label class="tv-field-label">Ventas del periodo (€)</label>
+                  <input type="number" class="tv-field-input" id="tvTurnoVentas" min="0" step="0.01" placeholder="0.00">
+                </div>
+              </div>
+              <div class="tv-field-group" style="margin-bottom:14px">
+                <label class="tv-field-label">ID Operario</label>
+                <input type="text" class="tv-field-input" id="tvTurnoOperario" placeholder="ID del operario (ej: usr-001)">
+              </div>
+              <button class="btn btn-primary" onclick="tvGuardarTurno()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15"><polyline points="20 6 9 17 4 12"/></svg>
+                Guardar Turno
+              </button>
+            </div>
+          </div>
+
+          <!-- ── KPIs Mensuales ── -->
+          <div class="tienda-sub-panel" id="panel-tv-kpis">
+            <div class="tv-kpi-grid">
+              <div class="tv-kpi-card">
+                <div class="tv-kpi-label">Ventas del mes</div>
+                <div class="tv-kpi-value" id="tvKpiMesVentas">–</div>
+                <div class="tv-kpi-sub">total neto €</div>
+              </div>
+              <div class="tv-kpi-card">
+                <div class="tv-kpi-label">Compras mes</div>
+                <div class="tv-kpi-value" id="tvKpiMesCompras">–</div>
+                <div class="tv-kpi-sub">facturas proveedor</div>
+              </div>
+              <div class="tv-kpi-card">
+                <div class="tv-kpi-label">Food Cost Real</div>
+                <div class="tv-kpi-value" id="tvKpiFoodCostReal" style="font-size:22px">–</div>
+                <div class="tv-kpi-sub">objetivo 18–28%</div>
+              </div>
+              <div class="tv-kpi-card">
+                <div class="tv-kpi-label">Días operativos</div>
+                <div class="tv-kpi-value" id="tvKpiDiasOp">–</div>
+                <div class="tv-kpi-sub">con ventas registradas</div>
+              </div>
+            </div>
+            <div class="tv-chart-card">
+              <div class="tv-chart-header">
+                <div class="tv-chart-title">📅 Ventas diarias del mes</div>
+                <input type="month" id="tvMesSelectorKPI" class="filter-input" style="width:auto;padding:6px 10px;font-size:12px">
+              </div>
+              <div class="tv-chart-container" style="height:200px"><canvas id="tvKpiMesChart"></canvas></div>
+            </div>
+          </div>
+
+          <!-- ── Facturas Proveedores ── -->
+          <div class="tienda-sub-panel" id="panel-tv-facturas">
+            <div class="tv-chart-card">
+              <div class="tv-chart-header"><div class="tv-chart-title">➕ Registrar Factura</div></div>
+              <div class="tv-alert-banner" id="tvAlertFactura"></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+                <div class="tv-field-group" style="grid-column:1/-1">
+                  <label class="tv-field-label">Proveedor *</label>
+                  <input type="text" class="tv-field-input" id="tvFacProv" placeholder="Nombre del proveedor">
+                </div>
+                <div class="tv-field-group">
+                  <label class="tv-field-label">Nº Factura *</label>
+                  <input type="text" class="tv-field-input" id="tvFacNum" placeholder="F-2027-001">
+                </div>
+                <div class="tv-field-group">
+                  <label class="tv-field-label">Fecha Factura *</label>
+                  <input type="date" class="tv-field-input" id="tvFacFecha">
+                </div>
+                <div class="tv-field-group">
+                  <label class="tv-field-label">Importe Total (€) *</label>
+                  <input type="number" class="tv-field-input" id="tvFacTotal" min="0" step="0.01" placeholder="0.00">
+                </div>
+              </div>
+              <button class="btn btn-primary" onclick="tvRegistrarFactura()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15"><polyline points="20 6 9 17 4 12"/></svg>
+                Registrar Factura
+              </button>
+            </div>
+          </div><!-- /panel-tv-facturas -->
+
+          <!-- ── Vista Operario (solo lectura, tiempo real) ── -->
+          <div class="tienda-sub-panel" id="panel-tv-operario">
+
+            <!-- Timer countdown -->
+            <div style="background:linear-gradient(135deg,#5C1420 0%,#7B1D2A 100%);border-radius:var(--radius);padding:18px 22px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 16px rgba(123,29,42,0.3)">
+              <div>
+                <div style="color:rgba(255,255,255,0.7);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase">⏱ Próxima tanda en</div>
+                <div style="color:#E8C96A;font-size:36px;font-weight:800;line-height:1" id="opCountdown">--:--</div>
+                <div style="color:rgba(255,255,255,0.6);font-size:11px;margin-top:2px" id="opTimerSub">Cargando...</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+                <div style="background:rgba(201,168,76,0.2);border-radius:12px;padding:10px 14px;font-size:13px;color:rgba(255,255,255,0.75)" id="opHoraActual"></div>
+                <button onclick="admRefreshOperario()" style="background:rgba(255,255,255,0.12);border:none;border-radius:8px;padding:6px 12px;color:white;font-family:Outfit;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.8"/></svg>
+                  Actualizar
+                </button>
+              </div>
+            </div>
+
+            <!-- Plan JIT -->
+            <div class="tv-chart-card" style="margin-bottom:16px">
+              <div class="tv-chart-header">
+                <div class="tv-chart-title">🧁 Plan JIT — Hornada Actual</div>
+                <span style="font-size:11px;color:var(--text-muted)">Auto-refresh cada 90min</span>
+              </div>
+              <div id="opPlanList">
+                <div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">Selecciona una tienda...</div>
+              </div>
+              <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--crema-dark);font-size:11px;color:var(--text-muted);text-align:center">
+                🧠 Algoritmo JIT · media ponderada últimas 3 semanas · <strong>Modo solo lectura</strong>
+              </div>
+            </div>
+
+            <!-- Mermas del día -->
+            <div class="tv-chart-card" style="margin-bottom:16px">
+              <div class="tv-chart-header">
+                <div class="tv-chart-title">📉 Estado Mermas — Hoy</div>
+                <div id="opMermaBadge" style="display:none;background:#FFF5F5;color:var(--error);border:1px solid #FECACA;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700">⚠️ Supera 2.5%</div>
+              </div>
+              <div id="opMermaResumen">
+                <div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">Cargando...</div>
+              </div>
+            </div>
+
+            <!-- Inventario crítico -->
+            <div class="tv-chart-card">
+              <div class="tv-chart-header">
+                <div class="tv-chart-title">📦 Ingredientes Críticos — Stock Mínimo</div>
+              </div>
+              <div id="opInventarioGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
+                <div style="grid-column:1/-1;text-align:center;padding:16px;color:var(--text-muted);font-size:13px">Selecciona una tienda...</div>
+              </div>
+            </div>
+
+          </div><!-- /panel-tv-operario -->
+
+        </div><!-- /tvContent -->
+      </div><!-- /panel-tienda-view -->
+
+      <!-- ══ PANEL GLOBAL ══ -->
+      <div class="tab-panel" id="panel-crm">
+        <div class="global-kpi-bar" style="grid-template-columns:repeat(4,1fr)">
+          <div class="gkpi"><span class="gkpi-icon">👑</span><div class="gkpi-label">VIP Premium</div><div class="gkpi-value" id="crmVIP">–</div><div class="gkpi-sub">clientes top</div></div>
+          <div class="gkpi"><span class="gkpi-icon">⭐</span><div class="gkpi-label">Frecuentes</div><div class="gkpi-value" id="crmFrec">–</div><div class="gkpi-sub">+8 visitas</div></div>
+          <div class="gkpi"><span class="gkpi-icon">💤</span><div class="gkpi-label">Inactivos</div><div class="gkpi-value" id="crmInact">–</div><div class="gkpi-sub">riesgo pérdida</div></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">👥 VIP Club — Base de Clientes Nacional</div>
+          </div>
+          <div class="filter-bar">
+            <select class="filter-input" id="crmFiltroSeg" onchange="filtrarCRM()">
+              <option value="">Todos los segmentos</option>
+              <option>VIP Premium</option><option>Frecuente</option><option>Ocasional</option><option>Nuevo</option><option>Inactivo</option>
+            </select>
+            <select class="filter-input" id="crmFiltroTienda" onchange="filtrarCRM()">
+              <option value="">Todas las tiendas</option>
+              <option value="BCN-01">Barcelona BCN-01</option>
+              <option value="MAD-01">Madrid MAD-01</option>
+              <option value="VAL-01">Valencia VAL-01</option>
+            </select>
+            <input type="text" class="filter-input" id="crmSearch" placeholder="🔍 Buscar cliente..." oninput="filtrarCRM()" style="flex:1;min-width:200px">
+          </div>
+          <div class="data-table-wrap">
+            <table>
+              <thead><tr><th>Nombre</th><th>Email</th><th>Tienda</th><th>Segmento</th><th>Visitas</th><th>Gasto Total</th><th>Ticket Medio</th></tr></thead>
+              <tbody id="crmBody">
+                <tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted)">Cargando CRM...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ EXPANSIÓN ══ -->
+      <div class="tab-panel" id="panel-expansion">
+        <div style="display:grid;grid-template-columns:1fr 340px;gap:24px;align-items:start">
+          <div class="chart-card">
+            <div class="chart-header"><div class="chart-title">🗺️ Plan de Expansión Estratégico 2027–2031</div></div>
+            <div class="timeline">
+              <div class="tl-item">
+                <div class="tl-dot done"></div>
+                <div class="tl-date">SEPTIEMBRE 2024</div>
+                <div class="tl-title">BCN-01 — Barcelona (Piloto)</div>
+                <div class="tl-desc">Apertura tienda piloto en Eixample. Validación del modelo de negocio: producción, ventas, operaciones y experiencia de cliente.</div>
+                <span class="tl-chip tl-chip-green">✅ Operativa</span>
+              </div>
+              <div class="tl-item">
+                <div class="tl-dot next"></div>
+                <div class="tl-date">Q1 2027 — MARZO</div>
+                <div class="tl-title">MAD-01 — Madrid · Barrio de Salamanca</div>
+                <div class="tl-desc">Primera expansión nacional en el barrio premium de Madrid. Perfil Boutique Regalo con alta demanda de gifting corporativo.</div>
+                <span class="tl-chip tl-chip-blue">🔵 En preparación</span>
+              </div>
+              <div class="tl-item">
+                <div class="tl-dot next"></div>
+                <div class="tl-date">Q2 2027 — JUNIO</div>
+                <div class="tl-title">VAL-01 — Valencia · Zona Comercial</div>
+                <div class="tl-desc">Segunda apertura en zona de alto tráfico. Perfil High Traffic / Impulse con foco en venta unitaria y impulso de marca.</div>
+                <span class="tl-chip tl-chip-orange">🟡 Negociación local</span>
+              </div>
+              <div class="tl-item">
+                <div class="tl-dot future"></div>
+                <div class="tl-date">2028 — H1</div>
+                <div class="tl-title">Expansión 4ª tienda</div>
+                <div class="tl-desc">Objetivo: Bilbao o Sevilla según resultados de MAD/VAL. Posible modelo corner en grandes almacenes.</div>
+                <span class="tl-chip tl-chip-gold">⏳ Estudio de mercado</span>
+              </div>
+              <div class="tl-item">
+                <div class="tl-dot future"></div>
+                <div class="tl-date">2029–2031</div>
+                <div class="tl-title">Consolidación Red Nacional (8–12 tiendas)</div>
+                <div class="tl-desc">Objetivo de 8 franquicias activas en España al cierre de 2031, con obrador central BCN como hub de producción de masa IQF.</div>
+                <span class="tl-chip tl-chip-gold">📋 Plan estratégico</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="chart-card" style="margin-bottom:20px">
+              <div class="chart-header" style="margin-bottom:14px"><div class="chart-title">📊 Proyección de Red</div></div>
+              <div style="position:relative;height:180px"><canvas id="expansionChart"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-header" style="margin-bottom:14px"><div class="chart-title">🎯 KPIs Objetivo Modelo</div></div>
+              <div style="font-size:13px">
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--crema-dark)"><span style="color:var(--text-muted)">Food Cost Clásicas</span><strong>18–22%</strong></div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--crema-dark)"><span style="color:var(--text-muted)">Food Cost Deluxe</span><strong>24–28%</strong></div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--crema-dark)"><span style="color:var(--text-muted)">Merma máx.</span><strong style="color:var(--error)">2.5%</strong></div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--crema-dark)"><span style="color:var(--text-muted)">PVP Cookie 150g</span><strong>3.50€</strong></div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--crema-dark)"><span style="color:var(--text-muted)">Ticket medio obj.</span><strong>12–18€</strong></div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0"><span style="color:var(--text-muted)">Rotación IQF</span><strong>&lt;7 días</strong></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ USUARIOS ══ -->
+      <div class="tab-panel" id="panel-usuarios">
+
+        <!-- Crear nuevo usuario -->
+        <div class="chart-card" style="margin-bottom:18px">
+          <div class="chart-header"><div class="chart-title">➕ Crear Nuevo Usuario</div></div>
+          <div id="alertUserResult" style="display:none;padding:12px 16px;border-radius:10px;margin-bottom:16px;font-size:13px;font-weight:500"></div>
+          <form id="newUserForm" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+            <div>
+              <div class="sb-section" style="padding:0 0 5px;font-size:10px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase">Nombre</div>
+              <input type="text" class="filter-input" id="nuNombre" placeholder="Nombre completo" style="width:100%">
+            </div>
+            <div>
+              <div class="sb-section" style="padding:0 0 5px;font-size:10px;color:var(--text-muted)">Email</div>
+              <input type="email" class="filter-input" id="nuEmail" placeholder="email@crosticookies.com" style="width:100%">
+            </div>
+            <div>
+              <div class="sb-section" style="padding:0 0 5px;font-size:10px;color:var(--text-muted)">Contraseña inicial</div>
+              <input type="password" class="filter-input" id="nuPass" placeholder="Mín. 8 caracteres" style="width:100%">
+            </div>
+            <div>
+              <div class="sb-section" style="padding:0 0 5px;font-size:10px;color:var(--text-muted)">Rol</div>
+              <select class="filter-input" id="nuRol" style="width:100%">
+                <option value="OPERARIO">Operario</option>
+                <option value="FRANQUICIADO">Franquiciado</option>
+                <option value="ADMIN">Administrador</option>
+              </select>
+            </div>
+            <div>
+              <div class="sb-section" style="padding:0 0 5px;font-size:10px;color:var(--text-muted)">Tienda</div>
+              <select class="filter-input" id="nuTienda" style="width:100%">
+                <option value="">Sin tienda (Admin)</option>
+                <option value="BCN-01">BCN-01 · Barcelona</option>
+                <option value="MAD-01">MAD-01 · Madrid</option>
+                <option value="VAL-01">VAL-01 · Valencia</option>
+              </select>
+            </div>
+            <div style="display:flex;align-items:flex-end">
+              <button type="submit" class="btn btn-primary" style="width:100%">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Crear Usuario
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Lista de usuarios -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">👥 Usuarios del Sistema</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input type="text" class="filter-input" id="usrSearch" placeholder="🔍 Buscar..." oninput="filtrarUsuarios()" style="width:180px;padding:6px 10px;font-size:12px">
+              <select class="filter-input" id="usrFiltroRol" onchange="filtrarUsuarios()" style="width:130px;padding:6px 10px;font-size:12px">
+                <option value="">Todos los roles</option>
+                <option value="ADMIN">Admin</option>
+                <option value="FRANQUICIADO">Franquiciado</option>
+                <option value="OPERARIO">Operario</option>
+              </select>
+              <button onclick="cargarUsuarios()" class="btn btn-gold" style="padding:6px 12px;font-size:12px">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.8"/></svg>
+                Recargar
+              </button>
+            </div>
+          </div>
+          <div id="alertUsrAction" style="display:none;padding:10px 14px;border-radius:9px;margin-bottom:12px;font-size:13px;font-weight:500"></div>
+          <div class="data-table-wrap">
+            <table id="usrTable">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Email</th>
+                  <th>Rol</th>
+                  <th>Tienda</th>
+                  <th>Estado</th>
+                  <th>Último login</th>
+                  <th style="text-align:right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="usrTableBody">
+                <tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted)">Cargando usuarios...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL EDITAR USUARIO -->
+      <div class="modal-overlay" id="modalEditUser">
+        <div class="modal" style="width:480px">
+          <div class="modal-title">
+            <div class="modal-title-icon">✏️</div>
+            Editar Usuario
+          </div>
+          <div id="alertEditUser" style="display:none;padding:10px 14px;border-radius:9px;margin-bottom:14px;font-size:13px;font-weight:500"></div>
+          <input type="hidden" id="editUsrId">
+          <div class="modal-grid">
+            <div class="modal-field">
+              <label class="modal-label">Nombre</label>
+              <input type="text" class="modal-input" id="editUsrNombre">
+            </div>
+            <div class="modal-field">
+              <label class="modal-label">Email (solo lectura)</label>
+              <input type="text" class="modal-input" id="editUsrEmail" disabled style="opacity:0.6">
+            </div>
+            <div class="modal-field">
+              <label class="modal-label">Rol</label>
+              <select class="modal-input" id="editUsrRol">
+                <option value="OPERARIO">Operario</option>
+                <option value="FRANQUICIADO">Franquiciado</option>
+                <option value="ADMIN">Administrador</option>
+              </select>
+            </div>
+            <div class="modal-field">
+              <label class="modal-label">Tienda</label>
+              <select class="modal-input" id="editUsrTienda">
+                <option value="">Sin tienda (Admin)</option>
+                <option value="BCN-01">BCN-01 · Barcelona</option>
+                <option value="MAD-01">MAD-01 · Madrid</option>
+                <option value="VAL-01">VAL-01 · Valencia</option>
+              </select>
+            </div>
+            <div class="modal-field full">
+              <label class="modal-label">Nueva contraseña (opcional)</label>
+              <input type="password" class="modal-input" id="editUsrPass" placeholder="Dejar vacío para no cambiar">
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button class="modal-btn-cancel" onclick="cerrarModalEditUser()">Cancelar</button>
+            <button class="modal-btn-save" onclick="guardarEditUser()">Guardar cambios</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL ELIMINAR USUARIO -->
+      <div class="modal-overlay" id="modalDelUser">
+        <div class="modal" style="width:420px">
+          <div class="modal-title">
+            <div class="modal-title-icon" style="background:linear-gradient(135deg,#B91C1C,#DC2626)">🗑️</div>
+            Eliminar Usuario
+          </div>
+          <div class="del-warning">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <div>Esta acción es <strong>irreversible</strong>. El usuario <strong id="delUsrNombreLabel"></strong> perderá acceso inmediatamente y se eliminarán todas sus sesiones activas.</div>
+          </div>
+          <input type="hidden" id="delUsrId">
+          <div class="modal-actions">
+            <button class="modal-btn-cancel" onclick="cerrarModalDelUser()">Cancelar</button>
+            <button class="modal-btn-danger" id="btnConfirmDelUser" onclick="confirmarEliminarUser()">Sí, eliminar</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+  // ─── AUTH GUARD ──────────────────────────────────────────
+  const token = localStorage.getItem('cc_token');
+  const rol = localStorage.getItem('cc_rol');
+  if (!token || rol !== 'ADMIN') window.location.href = './index.html';
+
+  const nombre = localStorage.getItem('cc_nombre');
+  document.getElementById('sbUserName').textContent = nombre || 'Administrador';
+
+  const now = new Date();
+  document.getElementById('datePill').textContent = now.toLocaleDateString('es-ES', {weekday:'short',day:'2-digit',month:'long',year:'numeric'});
+  document.getElementById('fechaGlobal').value = now.toISOString().split('T')[0];
+
+  const API = (path, opts = {}) => fetch(path, {
+    ...opts,
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', ...(opts.headers || {}) }
+  });
+
+  // ─── TABS ────────────────────────────────────────────────
+  const PAGE_TITLES = {
+    global: 'Panel Global Consolidado', escandallos: 'Escandallos & Food Cost',
+    ingredientes: 'Costes & Proveedores', crm: 'CRM Nacional VIP Club',
+    expansion: 'Plan de Expansión 2027–2031', usuarios: 'Gestión de Usuarios',
+    'tienda-view': 'Vista por Tienda', almacen: 'Control de Almacén',
+    reportes: 'Centro de Reportes'
+  };
+  function switchTab(tab, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.sb-item').forEach(b => b.classList.remove('active'));
+    document.getElementById('panel-' + tab).classList.add('active');
+    if (btn) btn.classList.add('active');
+    document.getElementById('pageTitle').textContent = PAGE_TITLES[tab] || tab;
+    if (tab === 'escandallos') recargarEscandallos();
+    if (tab === 'ingredientes') cargarIngredientes();
+    if (tab === 'crm') cargarCRM();
+    if (tab === 'expansion') renderExpansionChart();
+    if (tab === 'usuarios') cargarUsuarios();
+    if (tab === 'almacen') cargarAlmacen();
+    if (tab === 'reportes') initFechasReportes();
+    if (tab === 'tienda-view') {
+      if (!_tvTiendaActual) tvSeleccionarTienda('BCN-01', 'Barcelona (Piloto)');
+    }
+  }
+
+  // ─── LOGOUT ──────────────────────────────────────────────
+  document.getElementById('btnLogout').onclick = async () => {
+    await fetch('/api/auth/logout', { method:'POST', headers:{'Authorization':`Bearer ${token}`}}).catch(()=>{});
+    localStorage.clear(); window.location.href = './index.html';
+  };
+
+  // ─── DATE CHANGE ─────────────────────────────────────────
+  document.getElementById('fechaGlobal').onchange = cargarGlobal;
+
+  // ─── CHART DEFAULTS ──────────────────────────────────────
+  Chart.defaults.font.family = "'Outfit', sans-serif";
+  Chart.defaults.color = '#8B6B72';
+
+  // ─── PANEL GLOBAL ────────────────────────────────────────
+  async function cargarGlobal() {
+    const fecha = document.getElementById('fechaGlobal').value;
+    try {
+      const res = await API(`/api/dashboard/global?fecha=${fecha}`);
+      const d = await res.json();
+      const c = d.consolidado || {};
+
+      document.getElementById('gkpiVentas').textContent = c.ventas_netas_eu ? `${c.ventas_netas_eu.toFixed(2)}€` : '0.00€';
+      document.getElementById('gkpiVentasSub').textContent = `Red de ${c.tiendas_activas||0} tiendas`;
+      document.getElementById('gkpiTickets').textContent = c.total_tickets || 0;
+      document.getElementById('gkpiTicketsSub').textContent = 'tickets del día';
+      document.getElementById('gkpiTiendas').textContent = c.tiendas_activas || 1;
+      document.getElementById('gkpiTicketMedio').textContent = c.ticket_medio_red ? `${c.ticket_medio_red.toFixed(2)}€` : '–';
+
+      // Rellenar cards por tienda
+      for (const k of (d.kpis_tiendas || [])) {
+        const el = document.getElementById(`kpi-${k.id_tienda}`);
+        if (!el) continue;
+        el.innerHTML = `
+          <div class="tienda-kpi-row"><span class="tienda-kpi-label">Ventas netas</span><span class="tienda-kpi-value">${(k.ventas_netas_eu||0).toFixed(2)}€</span></div>
+          <div class="tienda-kpi-row"><span class="tienda-kpi-label">Tickets</span><span class="tienda-kpi-value">${k.num_tickets||0} · TM ${(k.ticket_medio||0).toFixed(2)}€</span></div>
+          <div class="tienda-kpi-row"><span class="tienda-kpi-label">Mermas €</span><span class="tienda-kpi-value" style="color:${(k.mermas_eu||0)>20?'var(--error)':'var(--success)'}">${(k.mermas_eu||0).toFixed(2)}€</span></div>
+          <div class="tienda-kpi-row"><span class="tienda-kpi-label">Horas-Hombre</span><span class="tienda-kpi-value">${k.horas_hombre||0}h</span></div>
+        `;
+      }
+
+      // Fallback: si alguna card sigue con skeletons (sin ventas ese día), mostrar ceros
+      document.querySelectorAll('.tienda-card-body .skeleton').forEach(sk => {
+        const body = sk.closest('.tienda-card-body');
+        if (!body) return;
+        body.innerHTML = `
+          <div class="tienda-kpi-row"><span class="tienda-kpi-label">Ventas netas</span><span class="tienda-kpi-value">0.00€</span></div>
+          <div class="tienda-kpi-row"><span class="tienda-kpi-label">Tickets</span><span class="tienda-kpi-value">0 · TM 0.00€</span></div>
+          <div class="tienda-kpi-row"><span class="tienda-kpi-label">Mermas €</span><span class="tienda-kpi-value" style="color:var(--success)">0.00€</span></div>
+          <div class="tienda-kpi-row"><span class="tienda-kpi-label">Horas-Hombre</span><span class="tienda-kpi-value">0h</span></div>
+          <div class="tienda-forecast" style="color:var(--text-muted)">Sin ventas registradas para esta fecha</div>
+        `;
+      });
+
+
+      // Food cost chart
+      const fc = d.food_cost_teorico || [];
+      const labels = fc.map(f => f.producto?.replace('Cookie ','').substring(0,18));
+      const datos = fc.map(f => f.food_cost_pct);
+      const colores = fc.map(f => f.food_cost_pct > (f.food_cost_obj_max||28) ? 'rgba(220,38,38,0.8)' : f.food_cost_pct > (f.food_cost_obj_max||28)-2 ? 'rgba(217,119,6,0.8)' : 'rgba(34,134,58,0.8)');
+
+      new Chart(document.getElementById('foodCostChart'), {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Food Cost %', data: datos, backgroundColor: colores, borderRadius: 6 },
+            { label: 'Objetivo máx.', data: fc.map(f => f.food_cost_obj_max||28), type: 'line', borderColor: 'rgba(123,29,42,0.5)', borderWidth: 1.5, borderDash: [4,4], pointRadius: 0, fill: false },
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+            y: { grid: { color: '#F0E8DC' }, ticks: { callback: v => `${v}%` }, max: 45 }
+          }
+        }
+      });
+
+    } catch (e) { console.error('Error global:', e); }
+  }
+
+  // ─── SIDEBAR HAMBURGER (MÓVIL) ───────────────────────────
+  function toggleSidebar() {
+    const sb = document.querySelector('.sidebar');
+    const bd = document.getElementById('sbBackdrop');
+    sb.classList.toggle('sb-open');
+    bd.classList.toggle('visible');
+  }
+  function cerrarSidebar() {
+    document.querySelector('.sidebar').classList.remove('sb-open');
+    document.getElementById('sbBackdrop').classList.remove('visible');
+  }
+  // Cerrar sidebar al navegar en móvil
+  document.querySelectorAll('.sb-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (window.innerWidth <= 768) cerrarSidebar();
+    });
+  });
+
+  // ─── ESCANDALLOS CRUD ────────────────────────────────────
+  let _escActual = null; // { producto, lineas, coste_total, food_cost_pct }
+  let _escAEliminar = null; // { id_producto, nombre }
+  let _nrLineas = []; // lineas del wizard nueva receta
+  let _ingSelectOpts = ''; // options HTML pre-renderizados de ingredientes
+
+  async function _cargarIngSelectOpts() {
+    if (_ingSelectOpts) return;
+    try {
+      const res = await API('/api/ingredientes');
+      const ings = await res.json();
+      _ingSelectOpts = ings.map(i =>
+        `<option value="${i.id_ingrediente}" data-unidad="${i.unidad}">${i.nombre} (${i.categoria})</option>`
+      ).join('');
+      ['newLineaIng', 'nrNewIng'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '<option value="">Ingrediente...</option>' + _ingSelectOpts;
+      });
+    } catch {}
+  }
+
+  async function recargarEscandallos() {
+    const tbody = document.getElementById('escandallосBody');
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted)">Cargando...</td></tr>';
+    await _cargarIngSelectOpts();
+    try {
+      const res = await API('/api/escandallos');
+      const data = await res.json();
+      if (!data.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted)">Sin recetas registradas. ¡Crea la primera!</td></tr>';
+        return;
+      }
+      // Group by categoria
+      const byCategory = {};
+      data.forEach(e => {
+        const cat = e.categoria || 'Sin Categoría';
+        if (!byCategory[cat]) byCategory[cat] = [];
+        byCategory[cat].push(e);
+      });
+
+      let html = '';
+      for (const [cat, items] of Object.entries(byCategory)) {
+        html += `<tr style="background: var(--crema);"><td colspan="7" style="font-size:12px;font-weight:800;color:var(--granate);text-transform:uppercase;letter-spacing:1px;padding:12px 14px;border-top:1px solid #E5D5C5;">📁 ${cat}</td></tr>`;
+        html += items.map(e => {
+          const isOk = e.food_cost_obj_max && e.food_cost_pct <= e.food_cost_obj_max && e.food_cost_pct >= (e.food_cost_obj_min || 0);
+          const isWarn = !isOk && e.food_cost_obj_max && e.food_cost_pct <= (e.food_cost_obj_max + 3);
+          const cls = isOk ? 'fc-ok' : isWarn ? 'fc-warn' : 'fc-bad';
+          const txt = isOk ? '✅ En obj.' : isWarn ? '⚠️ Límite' : '❌ Fuera obj.';
+          const idEsc = e.id_producto || '';
+          const nombre = (e.producto || '').replace(/'/g, "\\'");
+          return `<tr>
+            <td><strong>${e.producto||'—'}</strong><br><span style="font-size:10px;color:var(--text-muted)">${idEsc}</span></td>
+            <td>${e.pvp_directo !== null && e.pvp_directo !== undefined ? Number(e.pvp_directo).toFixed(2)+'€' : '–'}</td>
+            <td>${e.coste_produccion_eu ? e.coste_produccion_eu.toFixed(4)+'€' : '–'}</td>
+            <td><strong>${e.food_cost_pct||'–'}%</strong></td>
+            <td style="font-size:11px;color:var(--text-muted)">${e.food_cost_obj_min||'–'}–${e.food_cost_obj_max||'–'}%</td>
+            <td><span class="fc-badge ${cls}">${txt}</span></td>
+            <td style="white-space:nowrap">
+              <button class="ing-action-btn esc-btn-view" onclick="abrirDetalleEsc('${idEsc}')">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                Ver
+              </button>
+              <button class="ing-action-btn esc-btn-edit" style="margin-left:3px" onclick="abrirDetalleEsc('${idEsc}',true)">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                Editar
+              </button>
+              <button class="ing-action-btn esc-btn-del" style="margin-left:3px" onclick="abrirDelReceta('${idEsc}','${nombre}')">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M9 6V4h6v2"/></svg>
+                Eliminar
+              </button>
+            </td>
+          </tr>`;
+        }).join('');
+      }
+      tbody.innerHTML = html;
+    } catch (err) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--error)">Error al cargar datos.</td></tr>';
+    }
+  }
+
+  // ─ Modal detalle / edición ─────────────────────────────
+  async function abrirDetalleEsc(id_producto, editMode = false) {
+    document.getElementById('modalEscTitle').textContent = editMode ? '✏️ Editar Receta' : '👁️ Detalle Receta';
+    document.getElementById('escLineasBody').innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:13px">Cargando ingredientes...</div>';
+    document.getElementById('modalEscAlert').style.display = 'none';
+    document.getElementById('modalEscOverlay').classList.add('open');
+    // Reset tabs
+    document.querySelectorAll('#modalEscOverlay .modal-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('#modalEscOverlay .modal-tab-pane').forEach(p => p.classList.remove('active'));
+    document.querySelector('#modalEscOverlay .modal-tab').classList.add('active');
+    document.getElementById('escTabLineas').classList.add('active');
+    await _cargarIngSelectOpts();
+    try {
+      const res = await API(`/api/escandallos/${id_producto}/detalle`);
+      if (!res.ok) throw new Error('No se pudo cargar la receta');
+      _escActual = await res.json();
+      const { producto, lineas, coste_total, food_cost_pct } = _escActual;
+
+      // Summary bar
+      document.getElementById('escFcNombre').textContent = producto.nombre;
+      document.getElementById('escFcPvp').textContent = producto.pvp_directo !== null && producto.pvp_directo !== undefined ? producto.pvp_directo.toFixed(2) + '€' : '–';
+      document.getElementById('escFcCoste').textContent = coste_total ? coste_total.toFixed(4) + '€' : '0.0000€';
+      const pctEl = document.getElementById('escFcPct');
+      pctEl.textContent = food_cost_pct ? food_cost_pct + '%' : '–';
+      pctEl.style.color = food_cost_pct > (producto.food_cost_obj_max || 28) ? 'var(--error)' : 'var(--success)';
+
+      // Datos producto (tab 2)
+      document.getElementById('escNombre').value = producto.nombre || '';
+      document.getElementById('escCategoria').value = producto.categoria || '';
+      document.getElementById('escPvp').value = producto.pvp_directo !== null && producto.pvp_directo !== undefined ? producto.pvp_directo : '';
+      document.getElementById('escPvpUber').value = producto.pvp_ubereats !== null && producto.pvp_ubereats !== undefined ? producto.pvp_ubereats : '';
+      document.getElementById('escPeso').value = producto.peso_unidad_g || '';
+      document.getElementById('escFcMin').value = producto.food_cost_obj_min || '';
+      document.getElementById('escFcMax').value = producto.food_cost_obj_max || '';
+      document.getElementById('escDesc').value = producto.descripcion || '';
+
+      // Lineas de ingredientes
+      _renderLineasEsc(lineas, editMode);
+
+      // Controlar visibilidad del botón añadir
+      document.getElementById('addLineaRow').style.display = editMode ? 'grid' : 'none';
+      document.getElementById('btnGuardarEsc').style.display = editMode ? '' : 'none';
+    } catch (err) {
+      document.getElementById('escLineasBody').innerHTML = `<div style="padding:12px;color:var(--error);font-size:13px">❌ ${err.message}</div>`;
+    }
+  }
+
+  function _renderLineasEsc(lineas, editMode) {
+    const body = document.getElementById('escLineasBody');
+    if (!lineas.length) {
+      body.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:13px;font-style:italic">Sin ingredientes. Añade el primero usando el formulario de abajo.</div>';
+      return;
+    }
+    body.innerHTML = lineas.map(l => `
+      <div class="receta-linea" data-id="${l.id}">
+        <span style="font-size:13px;font-weight:600">${l.nombre_ingrediente}
+          <span class="ing-cat-badge">${l.fase}</span>
+        </span>
+        ${editMode
+          ? `<input class="receta-input" type="number" value="${l.cantidad}" min="0" step="0.001" onchange="_escLineas['${l.id}'].cantidad=parseFloat(this.value)">`
+          : `<span style="font-weight:700">${l.cantidad}</span>`}
+        <span style="font-size:12px;color:var(--text-muted)">${l.unidad}</span>
+        <span style="font-size:12px;color:var(--text-muted)">${l.fase}</span>
+        ${editMode
+          ? `<button class="receta-del-btn" title="Eliminar línea" onclick="eliminarLineaEsc(${l.id},this.closest('.receta-linea'))">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+             </button>`
+          : `<span style="font-size:11px;color:var(--text-muted)">${l.coste_linea ? l.coste_linea.toFixed(4)+'€' : ''}</span>`}
+      </div>
+    `).join('');
+    // Crear mapa para edición rápida de cantidades
+    window._escLineas = {};
+    lineas.forEach(l => { window._escLineas[l.id] = { ...l }; });
+  }
+
+  function switchEscTab(tab, btn) {
+    document.querySelectorAll('#modalEscOverlay .modal-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('#modalEscOverlay .modal-tab-pane').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(tab === 'lineas' ? 'escTabLineas' : 'escTabProducto').classList.add('active');
+  }
+
+  async function eliminarLineaEsc(id_linea, rowEl) {
+    if (!confirm('¿Eliminar este ingrediente de la receta?')) return;
+    try {
+      const res = await API(`/api/escandallos/linea/${id_linea}`, { method: 'DELETE' });
+      if (res.ok) rowEl.remove();
+      else alert('Error al eliminar la línea.');
+    } catch { alert('Error de red.'); }
+  }
+
+  async function agregarLineaEsc() {
+    const id_ingrediente = document.getElementById('newLineaIng').value;
+    const cantidad = parseFloat(document.getElementById('newLineaCantidad').value);
+    const unidad = document.getElementById('newLineaUnidad').value;
+    const fase = document.getElementById('newLineaFase').value;
+    const alertEl = document.getElementById('escLineasAlert');
+    if (!id_ingrediente || isNaN(cantidad) || cantidad <= 0) {
+      alertEl.style.cssText = 'display:block;padding:8px 12px;border-radius:8px;font-size:12px;background:#FFF5F5;color:var(--error);border:1px solid #FECACA;margin-bottom:10px';
+      alertEl.textContent = '⚠️ Selecciona un ingrediente y cantidad válida.';
+      return;
+    }
+    alertEl.style.display = 'none';
+    const id_producto = _escActual.producto.id_producto;
+    try {
+      const res = await API(`/api/escandallos/${id_producto}/lineas`, {
+        method: 'POST',
+        body: JSON.stringify({ id_ingrediente, cantidad, unidad, fase })
+      });
+      if (res.ok) {
+        document.getElementById('newLineaCantidad').value = '';
+        document.getElementById('newLineaIng').value = '';
+        // Recargar detalle
+        await abrirDetalleEsc(id_producto, true);
+      } else {
+        const d = await res.json();
+        alertEl.style.cssText = 'display:block;padding:8px 12px;border-radius:8px;font-size:12px;background:#FFF5F5;color:var(--error);border:1px solid #FECACA;margin-bottom:10px';
+        alertEl.textContent = '❌ ' + (d.error || 'Error al añadir.');
+      }
+    } catch { alertEl.textContent = '❌ Error de red.'; alertEl.style.display = 'block'; }
+  }
+
+  async function guardarEscandallo() {
+    if (!_escActual) return;
+    const alertEl = document.getElementById('modalEscAlert');
+    const btn = document.getElementById('btnGuardarEsc');
+    btn.textContent = 'Guardando...'; btn.disabled = true;
+    const id_producto = _escActual.producto.id_producto;
+    const productoPayload = {
+      nombre: document.getElementById('escNombre').value.trim(),
+      categoria: document.getElementById('escCategoria').value,
+      pvp_directo: parseFloat(document.getElementById('escPvp').value),
+      pvp_ubereats: parseFloat(document.getElementById('escPvpUber').value) || null,
+      peso_unidad_g: parseFloat(document.getElementById('escPeso').value) || null,
+      food_cost_obj_min: parseFloat(document.getElementById('escFcMin').value) || null,
+      food_cost_obj_max: parseFloat(document.getElementById('escFcMax').value) || null,
+      descripcion: document.getElementById('escDesc').value.trim() || null,
+    };
+    const updates = Object.values(window._escLineas || {}).map(l => ({
+      id: l.id, cantidad: l.cantidad, unidad: l.unidad, fase: l.fase
+    }));
+    try {
+      const res = await API(`/api/escandallos/${id_producto}`, {
+        method: 'PUT',
+        body: JSON.stringify({ producto: productoPayload, updates })
+      });
+      if (res.ok) {
+        cerrarModalEsc();
+        await recargarEscandallos();
+      } else {
+        const d = await res.json();
+        alertEl.style.cssText = 'display:block;padding:10px 14px;border-radius:9px;font-size:13px;background:#FFF5F5;color:var(--error);border:1px solid #FECACA;margin-top:14px';
+        alertEl.textContent = '❌ ' + (d.error || 'Error al guardar.');
+      }
+    } catch {
+      alertEl.style.cssText = 'display:block;padding:10px 14px;border-radius:9px;font-size:13px;background:#FFF5F5;color:var(--error);border:1px solid #FECACA;margin-top:14px';
+      alertEl.textContent = '❌ Error de red.';
+    } finally { btn.textContent = 'Guardar cambios'; btn.disabled = false; }
+  }
+
+  function cerrarModalEsc() {
+    document.getElementById('modalEscOverlay').classList.remove('open');
+    _escActual = null;
+  }
+
+  // ─ Modal Nueva Receta ──────────────────────────────────
+  function abrirModalNuevaReceta() {
+    _nrLineas = [];
+    ['nrId','nrNombre','nrPvp','nrPvpUber','nrFcMin','nrFcMax','nrPeso','nrDesc'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+    document.getElementById('nrCategoria').value = '';
+    document.getElementById('nrLineasList').innerHTML = '';
+    document.getElementById('nuevaRecetaPaso1').style.display = '';
+    document.getElementById('nuevaRecetaPaso2').style.display = 'none';
+    document.getElementById('modalNrAlert').style.display = 'none';
+    document.getElementById('modalNrAlert1').style.display = 'none';
+    _cargarIngSelectOpts().then(() => {
+      const el = document.getElementById('nrNewIng');
+      if (el) el.innerHTML = '<option value="">Ingrediente...</option>' + _ingSelectOpts;
+    });
+    document.getElementById('modalNuevaRecetaOverlay').classList.add('open');
+  }
+  function cerrarModalNuevaReceta() {
+    document.getElementById('modalNuevaRecetaOverlay').classList.remove('open');
+  }
+  function nrVolver() {
+    document.getElementById('nuevaRecetaPaso2').style.display = 'none';
+    document.getElementById('nuevaRecetaPaso1').style.display = '';
+  }
+  function nrPaso2() {
+    const a = document.getElementById('modalNrAlert1');
+    const id = document.getElementById('nrId').value.trim();
+    const nombre = document.getElementById('nrNombre').value.trim();
+    const categoria = document.getElementById('nrCategoria').value;
+    const pvp = parseFloat(document.getElementById('nrPvp').value);
+    if (!id || !nombre || !categoria || isNaN(pvp)) {
+      a.style.cssText = 'display:block;padding:8px 12px;border-radius:8px;font-size:12px;background:#FFF5F5;color:var(--error);border:1px solid #FECACA;margin-bottom:10px';
+      a.textContent = '⚠️ Rellena todos los campos obligatorios (*).'; return;
+    }
+    a.style.display = 'none';
+    document.getElementById('nuevaRecetaPaso1').style.display = 'none';
+    document.getElementById('nuevaRecetaPaso2').style.display = '';
+    _renderNrLineas();
+  }
+  function _renderNrLineas() {
+    const container = document.getElementById('nrLineasList');
+    if (!_nrLineas.length) { container.innerHTML = '<div style="padding:8px 0;color:var(--text-muted);font-size:12px;font-style:italic">Aún sin ingredientes. Añade el primero abajo.</div>'; return; }
+    container.innerHTML = _nrLineas.map((l, i) => `
+      <div class="receta-linea">
+        <span style="font-size:13px">${l.nombre_ing || l.id_ingrediente}</span>
+        <span style="font-weight:700">${l.cantidad}</span>
+        <span style="font-size:12px;color:var(--text-muted)">${l.unidad}</span>
+        <span style="font-size:12px;color:var(--text-muted)">${l.fase}</span>
+        <button class="receta-del-btn" onclick="_nrLineas.splice(${i},1);_renderNrLineas()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>`).join('');
+  }
+  function nrAddLinea() {
+    const sel = document.getElementById('nrNewIng');
+    const id_ingrediente = sel.value;
+    const nombre_ing = sel.options[sel.selectedIndex]?.text || id_ingrediente;
+    const cantidad = parseFloat(document.getElementById('nrNewCantidad').value);
+    const unidad = document.getElementById('nrNewUnidad').value;
+    const fase = document.getElementById('nrNewFase').value;
+    if (!id_ingrediente || isNaN(cantidad) || cantidad <= 0) {
+      const a = document.getElementById('modalNrAlert');
+      a.style.cssText = 'display:block;padding:8px 12px;border-radius:8px;font-size:12px;background:#FFF5F5;color:var(--error);border:1px solid #FECACA;margin-top:10px';
+      a.textContent = '⚠️ Selecciona ingrediente y cantidad válida.'; return;
+    }
+    document.getElementById('modalNrAlert').style.display = 'none';
+    _nrLineas.push({ id_ingrediente, nombre_ing, cantidad, unidad, fase });
+    document.getElementById('nrNewCantidad').value = '';
+    document.getElementById('nrNewIng').value = '';
+    _renderNrLineas();
+  }
+  async function crearNuevaReceta() {
+    const btn = document.getElementById('btnCrearReceta');
+    const alertEl = document.getElementById('modalNrAlert');
+    btn.textContent = 'Creando...'; btn.disabled = true;
+    const producto = {
+      id_producto: document.getElementById('nrId').value.trim().toUpperCase(),
+      nombre: document.getElementById('nrNombre').value.trim(),
+      categoria: document.getElementById('nrCategoria').value,
+      pvp_directo: parseFloat(document.getElementById('nrPvp').value),
+      pvp_ubereats: parseFloat(document.getElementById('nrPvpUber').value) || null,
+      food_cost_obj_min: parseFloat(document.getElementById('nrFcMin').value) || null,
+      food_cost_obj_max: parseFloat(document.getElementById('nrFcMax').value) || null,
+      peso_unidad_g: parseFloat(document.getElementById('nrPeso').value) || null,
+      descripcion: document.getElementById('nrDesc').value.trim() || null,
+    };
+    try {
+      const res = await API('/api/escandallos', {
+        method: 'POST',
+        body: JSON.stringify({ producto, lineas: _nrLineas })
+      });
+      const data = await res.json();
+      if (res.ok) { cerrarModalNuevaReceta(); await recargarEscandallos(); }
+      else {
+        alertEl.style.cssText = 'display:block;padding:8px 12px;border-radius:8px;font-size:12px;background:#FFF5F5;color:var(--error);border:1px solid #FECACA;margin-top:10px';
+        alertEl.textContent = '❌ ' + (data.error || 'Error al crear.');
+      }
+    } catch {
+      alertEl.style.cssText = 'display:block;padding:8px 12px;border-radius:8px;font-size:12px;background:#FFF5F5;color:var(--error);border:1px solid #FECACA;margin-top:10px';
+      alertEl.textContent = '❌ Error de red.';
+    } finally { btn.textContent = 'Crear Receta'; btn.disabled = false; }
+  }
+
+  // ─ Modal Eliminar Receta ────────────────────────────────
+  function abrirDelReceta(id_producto, nombre) {
+    _escAEliminar = { id_producto, nombre };
+    document.getElementById('delRecetaNombrePaso1').textContent = nombre;
+    document.getElementById('delRecetaNombrePaso2').textContent = nombre;
+    document.getElementById('delRecetaInput').value = '';
+    document.getElementById('btnConfirmDelReceta').disabled = true;
+    document.getElementById('delRecetaPaso1').style.display = 'block';
+    document.getElementById('delRecetaPaso2').style.display = 'none';
+    document.getElementById('modalDelRecetaOverlay').classList.add('open');
+  }
+  function cerrarModalDelReceta() {
+    document.getElementById('modalDelRecetaOverlay').classList.remove('open');
+    _escAEliminar = null;
+  }
+  function delRecetaPaso2() {
+    document.getElementById('delRecetaPaso1').style.display = 'none';
+    document.getElementById('delRecetaPaso2').style.display = 'block';
+    setTimeout(() => document.getElementById('delRecetaInput').focus(), 100);
+  }
+  function validarDelReceta() {
+    const input = document.getElementById('delRecetaInput').value;
+    document.getElementById('btnConfirmDelReceta').disabled = (input !== (_escAEliminar?.nombre || ''));
+  }
+  async function confirmarEliminarReceta() {
+    if (!_escAEliminar) return;
+    const btn = document.getElementById('btnConfirmDelReceta');
+    btn.textContent = 'Eliminando...'; btn.disabled = true;
+    try {
+      const res = await API(`/api/escandallos/${_escAEliminar.id_producto}`, { method: 'DELETE' });
+      if (res.ok) { cerrarModalDelReceta(); await recargarEscandallos(); }
+      else { alert('Error al eliminar la receta.'); btn.textContent = 'Confirmar eliminación'; btn.disabled = false; }
+    } catch { alert('Error de red.'); btn.textContent = 'Confirmar eliminación'; btn.disabled = false; }
+  }
+
+  // Cerrar modales escandallo al click fuera
+  ['modalEscOverlay','modalNuevaRecetaOverlay','modalDelRecetaOverlay'].forEach(id => {
+    document.getElementById(id).addEventListener('click', e => {
+      if (e.target.id === id) {
+        if (id === 'modalEscOverlay') cerrarModalEsc();
+        else if (id === 'modalNuevaRecetaOverlay') cerrarModalNuevaReceta();
+        else cerrarModalDelReceta();
+      }
+    });
+  });
+
+  // ─── INGREDIENTES CRUD ────────────────────────────────────
+  let _todosIngredientes = [];
+  let _ingEditandoId = null;
+  let _ingAEliminar = null;
+
+  async function cargarIngredientes() {
+    const tbody = document.getElementById('ingredientesBody');
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-muted)">Cargando...</td></tr>`;
+    try {
+      const res = await API('/api/ingredientes');
+      if (!res.ok) throw new Error();
+      _todosIngredientes = await res.json();
+      filtrarIngredientes();
+    } catch {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--error)">Error al cargar ingredientes.</td></tr>`;
+    }
+  }
+
+  function filtrarIngredientes() {
+    const q = document.getElementById('ingSearch')?.value.toLowerCase() || '';
+    const cat = document.getElementById('ingFiltroCat')?.value || '';
+    const filtrados = _todosIngredientes.filter(i =>
+      (!cat || i.categoria === cat) &&
+      (!q || i.nombre.toLowerCase().includes(q) || i.categoria.toLowerCase().includes(q) || i.id_ingrediente.toLowerCase().includes(q))
+    );
+    renderIngTable(filtrados);
+  }
+
+  function renderIngTable(lista) {
+    const tbody = document.getElementById('ingredientesBody');
+    if (!lista.length) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-muted)">No se encontraron ingredientes con ese filtro.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = lista.map(i => `
+      <tr>
+        <td><code style="font-size:11px;background:#F0E8DC;padding:2px 6px;border-radius:4px;color:var(--granate-deep)">${i.id_ingrediente}</code></td>
+        <td><strong>${i.nombre}</strong></td>
+        <td><span class="ing-cat-badge">${i.categoria}</span></td>
+        <td style="font-size:12px;color:var(--text-muted)">${i.proveedor_ref || '—'}</td>
+        <td style="font-weight:600">${i.unidad}</td>
+        <td><strong>${parseFloat(i.coste_por_unidad).toFixed(4)}€</strong></td>
+        <td style="font-size:12px;color:var(--text-muted)">${i.stock_seguridad_min ?? 0} ${i.unidad}</td>
+        <td style="white-space:nowrap">
+          <button class="ing-action-btn ing-btn-edit" onclick='abrirModalIng(${JSON.stringify(i)})'>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Editar
+          </button>
+          <button class="ing-action-btn ing-btn-del" onclick="abrirModalDel('${i.id_ingrediente}', '${i.nombre.replace(/'/g, "\\'")}')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            Eliminar
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function abrirModalIng(ing) {
+    _ingEditandoId = ing ? ing.id_ingrediente : null;
+    document.getElementById('modalIngTitle').textContent = ing ? '✏️ Editar Ingrediente' : '➕ Nuevo Ingrediente';
+    document.getElementById('ingId').value = ing?.id_ingrediente || '';
+    document.getElementById('ingId').disabled = !!ing;
+    document.getElementById('ingNombre').value = ing?.nombre || '';
+    document.getElementById('ingCategoria').value = ing?.categoria || '';
+    document.getElementById('ingProveedor').value = ing?.proveedor_ref || '';
+    document.getElementById('ingUnidad').value = ing?.unidad || '';
+    document.getElementById('ingCoste').value = ing?.coste_por_unidad || '';
+    document.getElementById('ingStock').value = ing?.stock_seguridad_min ?? '';
+    document.getElementById('modalIngAlert').style.display = 'none';
+    document.getElementById('modalIngOverlay').classList.add('open');
+    setTimeout(() => document.getElementById('ingNombre').focus(), 150);
+  }
+
+  function cerrarModalIng() {
+    document.getElementById('modalIngOverlay').classList.remove('open');
+    _ingEditandoId = null;
+  }
+
+  async function guardarIngrediente() {
+    const alertEl = document.getElementById('modalIngAlert');
+    const id = document.getElementById('ingId').value.trim().toUpperCase();
+    const nombre = document.getElementById('ingNombre').value.trim();
+    const categoria = document.getElementById('ingCategoria').value;
+    const proveedor_ref = document.getElementById('ingProveedor').value.trim() || null;
+    const unidad = document.getElementById('ingUnidad').value;
+    const coste_por_unidad = parseFloat(document.getElementById('ingCoste').value);
+    const stock_seguridad_min = parseFloat(document.getElementById('ingStock').value) || 0;
+
+    if (!nombre || !categoria || !unidad || isNaN(coste_por_unidad)) {
+      alertEl.style.cssText = 'display:block;padding:10px 14px;border-radius:9px;font-size:13px;background:#FFF5F5;color:var(--error);border:1px solid #FECACA;margin-bottom:14px';
+      alertEl.textContent = '⚠️ Completa todos los campos obligatorios (*).';
+      return;
+    }
+    if (!_ingEditandoId && !id) {
+      alertEl.style.cssText = 'display:block;padding:10px 14px;border-radius:9px;font-size:13px;background:#FFF5F5;color:var(--error);border:1px solid #FECACA;margin-bottom:14px';
+      alertEl.textContent = '⚠️ El ID del ingrediente es obligatorio.';
+      return;
+    }
+
+    const btn = document.getElementById('btnGuardarIng');
+    btn.textContent = 'Guardando...'; btn.disabled = true;
+
+    try {
+      let res;
+      if (_ingEditandoId) {
+        res = await API(`/api/ingredientes/${_ingEditandoId}`, {
+          method: 'PUT',
+          body: JSON.stringify({ nombre, categoria, proveedor_ref, unidad, coste_por_unidad, stock_seguridad_min })
+        });
+      } else {
+        res = await API('/api/ingredientes', {
+          method: 'POST',
+          body: JSON.stringify({ id_ingrediente: id, nombre, categoria, proveedor_ref, unidad, coste_por_unidad, stock_seguridad_min })
+        });
+      }
+      const data = await res.json();
+      if (res.ok) {
+        cerrarModalIng();
+        await cargarIngredientes();
+      } else {
+        alertEl.style.cssText = 'display:block;padding:10px 14px;border-radius:9px;font-size:13px;background:#FFF5F5;color:var(--error);border:1px solid #FECACA;margin-bottom:14px';
+        alertEl.textContent = '❌ ' + (data.error || 'Error al guardar.');
+      }
+    } catch {
+      alertEl.style.cssText = 'display:block;padding:10px 14px;border-radius:9px;font-size:13px;background:#FFF5F5;color:var(--error);border:1px solid #FECACA;margin-bottom:14px';
+      alertEl.textContent = '❌ Error de red.';
+    } finally {
+      btn.textContent = 'Guardar Ingrediente'; btn.disabled = false;
+    }
+  }
+
+  function abrirModalDel(id, nombre) {
+    _ingAEliminar = { id, nombre };
+    document.getElementById('delNombrePaso1').textContent = nombre;
+    document.getElementById('delNombrePaso2').textContent = nombre;
+    document.getElementById('delConfirmInput').value = '';
+    document.getElementById('btnConfirmDel').disabled = true;
+    document.getElementById('delPaso1').style.display = 'block';
+    document.getElementById('delPaso2').style.display = 'none';
+    document.getElementById('modalDelOverlay').classList.add('open');
+  }
+
+  function cerrarModalDel() {
+    document.getElementById('modalDelOverlay').classList.remove('open');
+    _ingAEliminar = null;
+  }
+
+  function irDelPaso2() {
+    document.getElementById('delPaso1').style.display = 'none';
+    document.getElementById('delPaso2').style.display = 'block';
+    setTimeout(() => document.getElementById('delConfirmInput').focus(), 100);
+  }
+
+  function validarConfirmNombre() {
+    const input = document.getElementById('delConfirmInput').value;
+    const nombre = _ingAEliminar?.nombre || '';
+    document.getElementById('btnConfirmDel').disabled = (input !== nombre);
+  }
+
+  async function confirmarEliminar() {
+    if (!_ingAEliminar) return;
+    const btn = document.getElementById('btnConfirmDel');
+    btn.textContent = 'Eliminando...'; btn.disabled = true;
+    try {
+      const res = await API(`/api/ingredientes/${_ingAEliminar.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        cerrarModalDel();
+        await cargarIngredientes();
+      } else {
+        alert('Error al eliminar el ingrediente.');
+        btn.textContent = 'Confirmar eliminación'; btn.disabled = false;
+      }
+    } catch {
+      alert('Error de red al eliminar.');
+      btn.textContent = 'Confirmar eliminación'; btn.disabled = false;
+    }
+  }
+
+  document.getElementById('modalIngOverlay').addEventListener('click', e => { if (e.target.id === 'modalIngOverlay') cerrarModalIng(); });
+  document.getElementById('modalDelOverlay').addEventListener('click', e => { if (e.target.id === 'modalDelOverlay') cerrarModalDel(); });
+
+  // ─── CRM ─────────────────────────────────────────────────
+  let crmData = [];
+  async function cargarCRM() {
+    try {
+      const res = await API('/api/crm?limit=200');
+      crmData = await res.json();
+
+      // Contar por segmento
+      const counts = { 'VIP Premium':0, 'Frecuente':0, 'Nuevo':0, 'Inactivo':0 };
+      crmData.forEach(c => { if (counts[c.segmento] !== undefined) counts[c.segmento]++; });
+      document.getElementById('crmVIP').textContent = counts['VIP Premium'];
+      document.getElementById('crmFrec').textContent = counts['Frecuente'];
+      document.getElementById('crmNew').textContent = counts['Nuevo'];
+      document.getElementById('crmInact').textContent = counts['Inactivo'];
+
+      renderCRMTable(crmData);
+    } catch {}
+  }
+
+  function renderCRMTable(data) {
+    const tbody = document.getElementById('crmBody');
+    tbody.innerHTML = data.slice(0, 100).map(c => `
+      <tr>
+        <td><strong>${c.nombre}</strong></td>
+        <td style="font-size:12px;color:var(--text-muted)">${c.email || '–'}</td>
+        <td style="font-size:11px">${c.id_tienda_origen || '–'}</td>
+        <td><span class="seg-badge seg-${c.segmento}">${c.segmento}</span></td>
+        <td>${c.total_visitas || 0}</td>
+        <td><strong>${(c.gasto_total_eu||0).toFixed(2)}€</strong></td>
+        <td>${(c.ticket_medio||0).toFixed(2)}€</td>
+      </tr>
+    `).join('') || '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted)">Sin clientes en el CRM todavía</td></tr>';
+  }
+
+  function filtrarCRM() {
+    const seg = document.getElementById('crmFiltroSeg').value;
+    const tienda = document.getElementById('crmFiltroTienda').value;
+    const search = document.getElementById('crmSearch').value.toLowerCase();
+    const filtered = crmData.filter(c =>
+      (!seg || c.segmento === seg) &&
+      (!tienda || c.id_tienda_origen === tienda) &&
+      (!search || c.nombre?.toLowerCase().includes(search) || c.email?.toLowerCase().includes(search))
+    );
+    renderCRMTable(filtered);
+  }
+
+  // ─── EXPANSION CHART ─────────────────────────────────────
+  function renderExpansionChart() {
+    new Chart(document.getElementById('expansionChart'), {
+      type: 'bar',
+      data: {
+        labels: ['2024','2027 Q1','2027 Q2','2028','2029','2030','2031'],
+        datasets: [{
+          label: 'Tiendas activas',
+          data: [1, 2, 3, 4, 6, 8, 12],
+          backgroundColor: 'rgba(123,29,42,0.75)', borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { x: { grid: { display: false } }, y: { grid: { color: '#F0E8DC' }, ticks: { precision: 0 } } }
+      }
+    });
+  }
+
+  // ─── CREAR USUARIO ───────────────────────────────────────
+  document.getElementById('newUserForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const alertEl = document.getElementById('alertUserResult');
+    const body = {
+      nombre: document.getElementById('nuNombre').value,
+      email: document.getElementById('nuEmail').value,
+      password: document.getElementById('nuPass').value,
+      rol: document.getElementById('nuRol').value,
+      id_tienda: document.getElementById('nuTienda').value || null,
+    };
+    try {
+      const res = await API('/api/auth/register', { method: 'POST', body: JSON.stringify(body) });
+      const data = await res.json();
+      alertEl.style.display = 'block';
+      if (res.ok) {
+        alertEl.style.cssText = 'display:block;padding:12px 16px;border-radius:10px;margin-bottom:16px;font-size:13px;font-weight:500;background:#F0FFF4;color:var(--success);border:1px solid #BBF7D0';
+        alertEl.textContent = `✅ Usuario ${body.email} creado con rol ${body.rol}.`;
+        document.getElementById('newUserForm').reset();
+        cargarUsuarios();
+      } else {
+        alertEl.style.cssText = 'display:block;padding:12px 16px;border-radius:10px;margin-bottom:16px;font-size:13px;font-weight:500;background:#FFF5F5;color:var(--error);border:1px solid #FECACA';
+        alertEl.textContent = '❌ ' + (data.error || 'Error al crear usuario.');
+      }
+    } catch {
+      alertEl.style.display = 'block'; alertEl.textContent = '❌ Error de red.';
+    }
+  };
+
+  // ─── GESTIÓN DE USUARIOS ────────────────────────────────
+  let _usrData = [];
+
+  const ROL_BADGE = {
+    ADMIN:        'background:#FEF3C7;color:#92400E;border:1px solid #FCD34D',
+    FRANQUICIADO: 'background:#EDE9FE;color:#5B21B6;border:1px solid #C4B5FD',
+    OPERARIO:     'background:#E0F2FE;color:#075985;border:1px solid #BAE6FD',
+  };
+
+  async function cargarUsuarios() {
+    const tbody = document.getElementById('usrTableBody');
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted)">Cargando...</td></tr>';
+    try {
+      const res  = await API('/api/usuarios');
+      _usrData   = await res.json();
+      renderUsuarios(_usrData);
+    } catch {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--error)">Error al cargar usuarios</td></tr>';
+    }
+  }
+
+  function renderUsuarios(lista) {
+    const tbody = document.getElementById('usrTableBody');
+    if (lista && lista.error) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--error)">Error de API: ${lista.error}</td></tr>`;
+      return;
+    }
+    if (!lista || !lista.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text-muted)">Sin usuarios registrados</td></tr>';
+      return;
+    }
+    tbody.innerHTML = lista.map(u => {
+      const rolStyle = ROL_BADGE[u.rol] || '';
+      const activo   = u.activo !== 0;
+      const login    = u.ultimo_login ? new Date(u.ultimo_login).toLocaleDateString('es-ES',{day:'2-digit',month:'short',year:'numeric'}) : 'Nunca';
+      return `<tr style="opacity:${activo?1:0.55}">
+        <td><strong>${u.nombre}</strong></td>
+        <td style="font-size:12px;color:var(--text-muted)">${u.email}</td>
+        <td><span style="${rolStyle};padding:3px 9px;border-radius:6px;font-size:11px;font-weight:700">${u.rol}</span></td>
+        <td>${u.id_tienda || '<span style="color:var(--text-muted);font-size:12px">—</span>'}</td>
+        <td>
+          <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:${activo?'var(--success)':'var(--text-muted)'}">
+            <span style="width:7px;height:7px;border-radius:50%;background:${activo?'var(--success)':'#CCC'};display:inline-block"></span>
+            ${activo ? 'Activo' : 'Inactivo'}
+          </span>
+        </td>
+        <td style="font-size:12px;color:var(--text-muted)">${login}</td>
+        <td style="text-align:right">
+          <button class="ing-action-btn ing-btn-edit" onclick='abrirEditUser(${JSON.stringify(u)})' title="Editar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Editar
+          </button>
+          <button class="ing-action-btn" style="background:${activo?'rgba(217,119,6,0.1)':'rgba(34,134,58,0.1)'};color:${activo?'var(--warning)':'var(--success)'};margin-left:4px"
+            onclick="toggleEstadoUser('${u.id}','${u.nombre}',${activo})" title="${activo?'Inactivar':'Activar'}">
+            ${activo
+              ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636"/></svg> Inactivar'
+              : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="20 6 9 17 4 12"/></svg> Activar'
+            }
+          </button>
+          <button class="ing-action-btn ing-btn-del" onclick="abrirDelUser('${u.id}','${u.nombre}')" title="Eliminar" style="margin-left:4px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            Eliminar
+          </button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function filtrarUsuarios() {
+    const q   = document.getElementById('usrSearch').value.toLowerCase();
+    const rol = document.getElementById('usrFiltroRol').value;
+    const filtered = _usrData.filter(u =>
+      (!rol || u.rol === rol) &&
+      (!q || u.nombre.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
+    );
+    renderUsuarios(filtered);
+  }
+
+  // ── Modal Editar ──
+  function abrirEditUser(u) {
+    document.getElementById('editUsrId').value     = u.id;
+    document.getElementById('editUsrNombre').value  = u.nombre;
+    document.getElementById('editUsrEmail').value   = u.email;
+    document.getElementById('editUsrRol').value     = u.rol;
+    document.getElementById('editUsrTienda').value  = u.id_tienda || '';
+    document.getElementById('editUsrPass').value    = '';
+    document.getElementById('alertEditUser').style.display = 'none';
+    document.getElementById('modalEditUser').classList.add('open');
+  }
+  function cerrarModalEditUser() { document.getElementById('modalEditUser').classList.remove('open'); }
+
+  async function guardarEditUser() {
+    const id      = document.getElementById('editUsrId').value;
+    const alertEl = document.getElementById('alertEditUser');
+    const body    = {
+      nombre:    document.getElementById('editUsrNombre').value,
+      rol:       document.getElementById('editUsrRol').value,
+      id_tienda: document.getElementById('editUsrTienda').value || null,
+      password:  document.getElementById('editUsrPass').value || undefined,
+    };
+    try {
+      const res = await API(`/api/usuarios/${id}`, { method:'PATCH', body: JSON.stringify(body) });
+      if (res.ok) {
+        cerrarModalEditUser();
+        mostrarAlertaUsuarios('✅ Usuario actualizado correctamente.', true);
+        cargarUsuarios();
+      } else {
+        const d = await res.json();
+        alertEl.style.cssText = 'display:block;padding:10px 14px;border-radius:9px;margin-bottom:14px;font-size:13px;font-weight:500;background:#FFF5F5;color:var(--error);border:1px solid #FECACA';
+        alertEl.textContent = '❌ ' + (d.error || 'Error al actualizar.');
+      }
+    } catch { alertEl.style.display='block'; alertEl.textContent='❌ Error de red.'; }
+  }
+
+  // ── Toggle estado ──
+  async function toggleEstadoUser(id, nombre, activoActual) {
+    const nuevo = !activoActual;
+    try {
+      const res = await API(`/api/usuarios/${id}/estado`, { method:'PATCH', body: JSON.stringify({ activo: nuevo }) });
+      if (res.ok) {
+        mostrarAlertaUsuarios(`✅ ${nombre} ${nuevo?'activado':'inactivado'} correctamente.`, true);
+        cargarUsuarios();
+      } else {
+        const d = await res.json();
+        mostrarAlertaUsuarios('❌ ' + (d.error || 'Error al cambiar estado.'), false);
+      }
+    } catch { mostrarAlertaUsuarios('❌ Error de red.', false); }
+  }
+
+  // ── Modal Eliminar ──
+  function abrirDelUser(id, nombre) {
+    document.getElementById('delUsrId').value = id;
+    document.getElementById('delUsrNombreLabel').textContent = nombre;
+    document.getElementById('modalDelUser').classList.add('open');
+  }
+  function cerrarModalDelUser() { document.getElementById('modalDelUser').classList.remove('open'); }
+
+  async function confirmarEliminarUser() {
+    const id  = document.getElementById('delUsrId').value;
+    const btn = document.getElementById('btnConfirmDelUser');
+    btn.disabled = true; btn.textContent = 'Eliminando...';
+    try {
+      const res = await API(`/api/usuarios/${id}`, { method:'DELETE' });
+      cerrarModalDelUser();
+      if (res.ok) {
+        mostrarAlertaUsuarios('✅ Usuario eliminado correctamente.', true);
+        cargarUsuarios();
+      } else {
+        const d = await res.json();
+        mostrarAlertaUsuarios('❌ ' + (d.error || 'Error al eliminar.'), false);
+      }
+    } catch { mostrarAlertaUsuarios('❌ Error de red.', false); }
+    finally { btn.disabled = false; btn.textContent = 'Sí, eliminar'; }
+  }
+
+  function mostrarAlertaUsuarios(msg, ok) {
+    const el = document.getElementById('alertUsrAction');
+    el.style.cssText = `display:block;padding:10px 14px;border-radius:9px;margin-bottom:12px;font-size:13px;font-weight:500;background:${ok?'#F0FFF4':'#FFF5F5'};color:${ok?'var(--success)':'var(--error)'};border:1px solid ${ok?'#BBF7D0':'#FECACA'}`;
+    el.textContent = msg;
+    setTimeout(() => { el.style.display='none'; }, 5000);
+  }
+
+  // ─── INIT ────────────────────────────────────────────────
+  cargarGlobal();
+  tvInicializar();
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+
+  // ══════════════════════════════════════════════════════════
+  // VISTA POR TIENDA — lógica completa
+  // ══════════════════════════════════════════════════════════
+
+  let _tvTiendaActual = null;
+  let _tvVentasHoraChart = null;
+  let _tvVentasMesChart  = null;
+  let _tvKpiMesChart     = null;
+
+  function tvInicializar() {
+    const hoy = new Date();
+    document.getElementById('tvFecha').value = hoy.toISOString().split('T')[0];
+    const mesActual = hoy.toISOString().slice(0, 7);
+    document.getElementById('tvMesSelector').value    = mesActual;
+    document.getElementById('tvMesSelectorKPI').value = mesActual;
+    document.getElementById('tvFacFecha').value       = hoy.toISOString().split('T')[0];
+
+    // Escuchadores de cambio de fecha y mes
+    document.getElementById('tvFecha').onchange       = () => { if (_tvTiendaActual) admCargarDashboard(_tvTiendaActual); };
+    document.getElementById('tvMesSelector').onchange = () => { if (_tvTiendaActual) admCargarVentasMes(_tvTiendaActual); };
+    document.getElementById('tvMesSelectorKPI').onchange = () => { if (_tvTiendaActual) admCargarKPIsMes(_tvTiendaActual); };
+
+    // Cargar lista de tiendas activas
+    tvCargarTiendas();
+  }
+
+  async function tvCargarTiendas() {
+    // Renderizar lista hardcoded inmediatamente para garantizar UX sin esperar API
+    const TIENDAS_DEFAULT = [
+      { id_tienda: 'BCN-01', tienda: 'Barcelona (Piloto)' },
+      { id_tienda: 'MAD-01', tienda: 'Madrid · Salamanca' },
+      { id_tienda: 'VAL-01', tienda: 'Valencia · Centro'  },
+    ];
+    const container = document.getElementById('tvTiendaBtns');
+    const renderBtns = (tiendas) => {
+      container.innerHTML = tiendas.map(t => `
+        <button class="tienda-select-btn" id="tvBtn-${t.id_tienda}"
+          onclick="tvSeleccionarTienda('${t.id_tienda}', '${(t.tienda || t.id_tienda).replace(/'/g,"\\'")}')"
+          title="${t.tienda || t.id_tienda}">
+          ${t.id_tienda}
+        </button>
+      `).join('');
+    };
+    renderBtns(TIENDAS_DEFAULT);
+
+    // Auto-seleccionar BCN-01 por defecto
+    tvSeleccionarTienda('BCN-01', 'Barcelona (Piloto)');
+
+    // Intentar actualizar desde API en background
+    try {
+      const res = await API('/api/dashboard/global?fecha=' + new Date().toISOString().split('T')[0]);
+      const d   = await res.json();
+      const tiendas = (d.kpis_tiendas || []);
+      if (tiendas.length > 0) {
+        renderBtns(tiendas);
+        // Restaurar estado activo del botón seleccionado
+        if (_tvTiendaActual) {
+          const btn = document.getElementById('tvBtn-' + _tvTiendaActual);
+          if (btn) btn.classList.add('active');
+        }
+      }
+    } catch { /* mantener lista hardcoded */ }
+  }
+
+  function tvSeleccionarTienda(id, nombre) {
+    _tvTiendaActual = id;
+
+    // Actualizar botones activos
+    document.querySelectorAll('.tienda-select-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.getElementById('tvBtn-' + id);
+    if (btn) btn.classList.add('active');
+
+    // Mostrar contenido
+    document.getElementById('tvEmpty').style.display   = 'none';
+    document.getElementById('tvContent').style.display = 'block';
+
+    // Resetear a sub-tab Resumen
+    switchTiendaTab('tv-resumen',
+      document.querySelector('#tvSubTabs .tienda-view-tab'));
+
+    // Cargar datos
+    admCargarDashboard(id);
+  }
+
+  function switchTiendaTab(tab, btn) {
+    document.querySelectorAll('.tienda-sub-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tienda-view-tab').forEach(b => b.classList.remove('active'));
+    document.getElementById('panel-' + tab).classList.add('active');
+    if (btn) btn.classList.add('active');
+
+    if (tab === 'tv-ventas'   && _tvTiendaActual) admCargarVentasMes(_tvTiendaActual);
+    if (tab === 'tv-kpis'     && _tvTiendaActual) admCargarKPIsMes(_tvTiendaActual);
+    if (tab === 'tv-operario' && _tvTiendaActual) admCargarOperario(_tvTiendaActual);
+  }
+
+  // ─── Cargar dashboard del día ─────────────────────────────
+  async function admCargarDashboard(id) {
+    const fecha = document.getElementById('tvFecha').value;
+    try {
+      const res = await API(`/api/dashboard/tienda/${id}?fecha=${fecha}`);
+      const d   = await res.json();
+
+      const k = d.kpi || {};
+      document.getElementById('tvKpiVentas').textContent     = k.ventas_netas_eu ? `${k.ventas_netas_eu.toFixed(2)}€` : '0.00€';
+      document.getElementById('tvKpiVentasSub').textContent  = `${k.unidades_vendidas || 0} unidades vendidas`;
+      document.getElementById('tvKpiTickets').textContent    = k.num_tickets || 0;
+      document.getElementById('tvKpiTicketsSub').textContent = `Ticket medio: ${(k.ticket_medio || 0).toFixed(2)}€`;
+      document.getElementById('tvKpiMermas').textContent     = k.mermas_eu ? `${k.mermas_eu.toFixed(2)}€` : '0.00€';
+      document.getElementById('tvKpiHoras').textContent      = k.horas_hombre ? `${k.horas_hombre}h` : '–';
+      if (k.ventas_netas_eu && k.horas_hombre) {
+        document.getElementById('tvKpiHorasSub').textContent  = `${(k.ventas_netas_eu / k.horas_hombre).toFixed(2)}€/h·h`;
+        document.getElementById('tvKpiVentasHora').textContent = `KPI: ${(k.ventas_netas_eu / k.horas_hombre).toFixed(2)} €/h·h`;
+      } else {
+        document.getElementById('tvKpiHorasSub').textContent  = '–';
+        document.getElementById('tvKpiVentasHora').textContent = 'KPI: – €/h·h';
+      }
+
+      // Curva ventas por hora
+      const horas    = Array.from({length: 24}, (_, i) => i);
+      const ventasH  = d.ventas_hora || [];
+      const ventasMap = Object.fromEntries(ventasH.map(v => [v.hora, v.ventas_eu]));
+      const ventasData = horas.map(h => ventasMap[h] || 0);
+
+      if (_tvVentasHoraChart) _tvVentasHoraChart.destroy();
+      _tvVentasHoraChart = new Chart(document.getElementById('tvVentasHoraChart'), {
+        type: 'bar',
+        data: {
+          labels: horas.map(h => `${String(h).padStart(2,'0')}h`),
+          datasets: [{
+            label: 'Ventas €', data: ventasData,
+            backgroundColor: horas.map(h => ventasMap[h] ? 'rgba(123,29,42,0.85)' : 'rgba(123,29,42,0.12)'),
+            borderRadius: 6, borderSkipped: false,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+            y: { grid: { color: '#F0E8DC' }, ticks: { callback: v => `${v}€` } }
+          }
+        }
+      });
+
+      // Top productos
+      document.getElementById('tvTopProductosBody').innerHTML =
+        (d.top_productos || []).map((p, i) => `
+          <tr>
+            <td><strong>${i+1}</strong></td>
+            <td>${p.nombre}</td>
+            <td>${p.unidades}</td>
+            <td><strong>${(p.ventas_eu || 0).toFixed(2)}€</strong></td>
+          </tr>
+        `).join('') ||
+        '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px">Sin ventas registradas</td></tr>';
+
+      // Personal
+      document.getElementById('tvPersonalBody').innerHTML =
+        (d.personal || []).map(p => `
+          <tr>
+            <td><strong>${p.nombre}</strong></td>
+            <td><span class="tv-turno-badge tv-turno-${p.turno}">${p.turno}</span></td>
+            <td>${p.hora_entrada || '–'}</td>
+            <td>${p.hora_salida || '🟢 Activo'}</td>
+            <td>${p.horas_trabajadas ? p.horas_trabajadas.toFixed(1)+'h' : '–'}</td>
+            <td>${p.kpi_ventas_hora ? p.kpi_ventas_hora.toFixed(2)+'€' : '–'}</td>
+          </tr>
+        `).join('') ||
+        '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px">Sin turnos registrados</td></tr>';
+
+    } catch (e) { console.error('TV dashboard error:', e); }
+  }
+
+  // ─── Ventas del mes + Food Cost ───────────────────────────
+  async function admCargarVentasMes(id) {
+    const mes = document.getElementById('tvMesSelector').value;
+    try {
+      const res = await API(`/api/kpis/mensual/${id}?mes=${mes}`);
+      const d   = await res.json();
+      const dias   = (d.ventas_diarias || []).map(v => v.fecha.slice(8));
+      const ventas = (d.ventas_diarias || []).map(v => v.ventas_eu);
+
+      if (_tvVentasMesChart) _tvVentasMesChart.destroy();
+      _tvVentasMesChart = new Chart(document.getElementById('tvVentasMesChart'), {
+        type: 'line',
+        data: {
+          labels: dias,
+          datasets: [{
+            label: 'Ventas €', data: ventas,
+            borderColor: '#7B1D2A', backgroundColor: 'rgba(123,29,42,0.08)',
+            borderWidth: 2.5, fill: true, tension: 0.4,
+            pointBackgroundColor: '#7B1D2A', pointRadius: 4,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false } },
+            y: { grid: { color: '#F0E8DC' }, ticks: { callback: v => `${v}€` } }
+          }
+        }
+      });
+
+      // Food Cost teórico (reutilizamos datos del panel global ya cargados)
+      try {
+        const fcRes = await API('/api/escandallos');
+        const fcData = await fcRes.json();
+        document.getElementById('tvFoodCostList').innerHTML = fcData.slice(0, 10).map(fc => {
+          const pct = fc.food_cost_pct || 0;
+          const cls = pct > (fc.food_cost_obj_max || 28) ? 'bad' : pct > (fc.food_cost_obj_max || 28) - 2 ? 'warn' : 'ok';
+          const color = cls === 'bad' ? 'var(--error)' : cls === 'warn' ? 'var(--warning)' : 'var(--success)';
+          return `
+            <div class="tv-fc-row">
+              <div class="tv-fc-name">${fc.producto || '–'}</div>
+              <div class="tv-fc-bar-wrap"><div class="tv-fc-bar ${cls}" style="width:${Math.min(pct/40*100,100)}%"></div></div>
+              <div class="tv-fc-pct" style="color:${color}">${pct}%</div>
+              <div style="font-size:10px;color:var(--text-muted);min-width:70px;text-align:right">obj. ${fc.food_cost_obj_min||'–'}–${fc.food_cost_obj_max||'–'}%</div>
+            </div>
+          `;
+        }).join('') || '<div style="padding:20px;text-align:center;color:var(--text-muted)">Sin datos de food cost</div>';
+      } catch {}
+
+    } catch {}
+  }
+
+  // ─── KPIs mensuales ───────────────────────────────────────
+  async function admCargarKPIsMes(id) {
+    const mes = document.getElementById('tvMesSelectorKPI').value;
+    try {
+      const res = await API(`/api/kpis/mensual/${id}?mes=${mes}`);
+      const d   = await res.json();
+      const r   = d.resumen || {};
+      document.getElementById('tvKpiMesVentas').textContent  = `${(r.ventas_total_eu || 0).toFixed(2)}€`;
+      document.getElementById('tvKpiMesCompras').textContent = `${(r.compras_total_eu || 0).toFixed(2)}€`;
+      document.getElementById('tvKpiDiasOp').textContent     = r.dias_con_ventas || 0;
+
+      const fc   = r.food_cost_real_pct || 0;
+      const fcEl = document.getElementById('tvKpiFoodCostReal');
+      fcEl.textContent = `${fc}%`;
+      fcEl.style.color = fc > 28 ? 'var(--error)' : fc > 22 ? 'var(--warning)' : 'var(--success)';
+
+      const dias   = (d.ventas_diarias || []).map(v => v.fecha.slice(8));
+      const ventas = (d.ventas_diarias || []).map(v => v.ventas_eu);
+      if (_tvKpiMesChart) _tvKpiMesChart.destroy();
+      _tvKpiMesChart = new Chart(document.getElementById('tvKpiMesChart'), {
+        type: 'bar',
+        data: { labels: dias, datasets: [{ label: '€', data: ventas, backgroundColor: 'rgba(123,29,42,0.75)', borderRadius: 4 }] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { x: { grid: { display: false } }, y: { grid: { color: '#F0E8DC' }, ticks: { callback: v => `${v}€` } } }
+        }
+      });
+    } catch {}
+  }
+
+  // ─── Guardar turno (desde vista admin) ───────────────────
+  async function tvGuardarTurno() {
+    const alertEl = document.getElementById('tvAlertTurno');
+    if (!_tvTiendaActual) { alertEl.className='tv-alert-banner tv-alert-error show'; alertEl.textContent='Selecciona una tienda primero.'; return; }
+    try {
+      const res = await API('/api/personal/turno', {
+        method: 'POST',
+        body: JSON.stringify({
+          id_operario:   document.getElementById('tvTurnoOperario').value,
+          id_tienda:     _tvTiendaActual,
+          fecha:         document.getElementById('tvFecha').value,
+          turno:         document.getElementById('tvTurnoTipo').value,
+          hora_entrada:  document.getElementById('tvTurnoEntrada').value,
+          hora_salida:   document.getElementById('tvTurnoSalida').value || undefined,
+          ventas_periodo: parseFloat(document.getElementById('tvTurnoVentas').value) || 0,
+        })
+      });
+      alertEl.className = 'tv-alert-banner ' + (res.ok ? 'tv-alert-success show' : 'tv-alert-error show');
+      alertEl.textContent = res.ok ? '✅ Turno registrado correctamente.' : '❌ Error al guardar turno.';
+    } catch {
+      alertEl.className = 'tv-alert-banner tv-alert-error show';
+      alertEl.textContent = '❌ Error de red.';
+    }
+  }
+
+  // ─── Registrar factura (desde vista admin) ────────────────
+  async function tvRegistrarFactura() {
+    const alertEl = document.getElementById('tvAlertFactura');
+    if (!_tvTiendaActual) { alertEl.className='tv-alert-banner tv-alert-error show'; alertEl.textContent='Selecciona una tienda primero.'; return; }
+    const prov   = document.getElementById('tvFacProv').value;
+    const num    = document.getElementById('tvFacNum').value;
+    const fecha  = document.getElementById('tvFacFecha').value;
+    const total  = parseFloat(document.getElementById('tvFacTotal').value);
+    if (!prov || !num || !fecha || isNaN(total)) {
+      alertEl.className='tv-alert-banner tv-alert-error show';
+      alertEl.textContent='Completa todos los campos requeridos.'; return;
+    }
+    try {
+      const res = await API('/api/facturas', {
+        method: 'POST',
+        body: JSON.stringify({ proveedor: prov, numero_factura: num, fecha_factura: fecha, total_factura: total, id_tienda: _tvTiendaActual })
+      });
+      if (res.ok) {
+        alertEl.className = 'tv-alert-banner tv-alert-success show';
+        alertEl.textContent = '✅ Factura registrada correctamente.';
+        ['tvFacProv','tvFacNum','tvFacTotal'].forEach(id => { document.getElementById(id).value = ''; });
+      } else {
+        const err = await res.json();
+        alertEl.className = 'tv-alert-banner tv-alert-error show';
+        alertEl.textContent = '❌ ' + (err.error || 'Error al guardar factura.');
+      }
+    } catch {
+      alertEl.className = 'tv-alert-banner tv-alert-error show';
+      alertEl.textContent = '❌ Error de red.';
+    }
+  }
+  // ─── VISTA OPERARIO — tiempo real ────────────────────────
+
+  let _opCountdownInterval = null;
+  let _opRefreshInterval   = null;
+  let _opHoraInterval      = null;
+
+  function admIniciarCountdown() {
+    if (_opCountdownInterval) clearInterval(_opCountdownInterval);
+    const calcNext = () => {
+      const now  = new Date();
+      const min  = now.getMinutes();
+      const next = new Date(now);
+      if      (min < 30) { next.setMinutes(30, 0, 0); }
+      else if (min < 60) { next.setHours(now.getHours() + 1, 0, 0, 0); }
+      return next;
+    };
+    let nextBake = calcNext();
+
+    const tick = () => {
+      const now2 = new Date();
+      if (nextBake <= now2) nextBake = calcNext();
+      const diff = nextBake - now2;
+      const m = String(Math.floor(diff / 60000)).padStart(2, '0');
+      const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
+      const el  = document.getElementById('opCountdown');
+      const sub = document.getElementById('opTimerSub');
+      if (el)  el.textContent  = `${m}:${s}`;
+      if (sub) sub.textContent = `Inicio hornada: ${nextBake.toTimeString().slice(0,5)}`;
+    };
+    tick();
+    _opCountdownInterval = setInterval(tick, 1000);
+  }
+
+  function admActualizarHoraOp() {
+    const el = document.getElementById('opHoraActual');
+    if (!el) return;
+    const now  = new Date();
+    const dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+    el.textContent = `${dias[now.getDay()]} ${now.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}`;
+  }
+
+  const OP_INGREDIENTES = [
+    { id:'ING-015', nombre:'Masa IQF Clásica',  unidad:'ud', min:50 },
+    { id:'ING-016', nombre:'Masa IQF Deluxe',   unidad:'ud', min:20 },
+    { id:'ING-009', nombre:'Chips Chocolate',   unidad:'kg', min:2  },
+    { id:'ING-002', nombre:'Mantequilla 82%',   unidad:'kg', min:3  },
+    { id:'ING-001', nombre:'Harina T55',         unidad:'kg', min:10 },
+    { id:'ING-019', nombre:'Leche Entera',       unidad:'L',  min:5  },
+    { id:'ING-017', nombre:'Soda Prebiótica',   unidad:'ud', min:12 },
+    { id:'ING-018', nombre:'Café Green Bean',   unidad:'kg', min:1  },
+  ];
+
+  async function admCargarOperario(id) {
+    admIniciarCountdown();
+    if (_opHoraInterval) clearInterval(_opHoraInterval);
+    admActualizarHoraOp();
+    _opHoraInterval = setInterval(admActualizarHoraOp, 10000);
+
+    // Inventario estático (referencia de mínimos)
+    document.getElementById('opInventarioGrid').innerHTML = OP_INGREDIENTES.map(ing => `
+      <div style="background:var(--blanco);border-radius:var(--radius-sm);padding:12px 14px;box-shadow:0 1px 4px rgba(0,0,0,0.05)">
+        <div style="font-size:13px;font-weight:600;color:var(--text-dark);margin-bottom:2px">${ing.nombre}</div>
+        <div style="font-size:11px;color:var(--text-muted)">Mín: ${ing.min} ${ing.unidad}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:3px;font-style:italic">Stock actual: a cargo del operario</div>
+      </div>
+    `).join('');
+
+    await Promise.all([admCargarPlanJIT(id), admCargarMermasOp(id)]);
+
+    if (_opRefreshInterval) clearInterval(_opRefreshInterval);
+    _opRefreshInterval = setInterval(() => admRefreshOperario(), 90000);
+  }
+
+  async function admRefreshOperario() {
+    if (!_tvTiendaActual) return;
+    await Promise.all([admCargarPlanJIT(_tvTiendaActual), admCargarMermasOp(_tvTiendaActual)]);
+  }
+
+  async function admCargarPlanJIT(id) {
+    const hora  = new Date().getHours();
+    const listEl = document.getElementById('opPlanList');
+    listEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:13px">⏳ Cargando plan...</div>';
+    try {
+      const res  = await API(`/api/horneado/plan?hora=${hora}&tienda=${id}`);
+      const data = await res.json();
+      const plan = data.plan || [];
+      if (!plan.length) {
+        listEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">✅ Sin producción programada para esta hora</div>';
+        return;
+      }
+      listEl.innerHTML = plan.map(p => {
+        const isDeluxe = p.nombre.toLowerCase().includes('deluxe');
+        const borderColor = isDeluxe ? '#C9A84C' : 'var(--granate)';
+        const badgeBg     = isDeluxe ? 'linear-gradient(135deg,#C9A84C,#A07830)' : 'var(--granate)';
+        return `
+          <div style="background:var(--blanco);border-radius:var(--radius-sm);padding:14px 16px;border-left:4px solid ${borderColor};display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 4px rgba(0,0,0,0.06);margin-bottom:10px">
+            <div>
+              <div style="font-size:14px;font-weight:600;color:var(--text-dark)">${p.nombre}</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px">🕐 Iniciar: ${p.hora_inicio_hornado} · ${p.minutos_horno}min horno</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:1px">Media hist.: ${p.media_historica_hora} ud/h · Factor: ×${p.factor_dia}</div>
+            </div>
+            <div style="background:${badgeBg};color:white;font-size:22px;font-weight:800;padding:8px 14px;border-radius:var(--radius-sm);min-width:60px;text-align:center;line-height:1">
+              ${p.unidades_tanda}
+              <div style="font-size:10px;font-weight:500;opacity:0.8">ud/tanda</div>
+            </div>
+          </div>`;
+      }).join('');
+    } catch {
+      listEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--error);font-size:13px">⚠️ Error al cargar plan. Verifica conexión.</div>';
+    }
+  }
+
+  async function admCargarMermasOp(id) {
+    const fecha = new Date().toISOString().split('T')[0];
+    const el    = document.getElementById('opMermaResumen');
+    const badge = document.getElementById('opMermaBadge');
+    try {
+      const res  = await API(`/api/mermas/validar?tienda=${id}&fecha=${fecha}`);
+      const data = await res.json();
+      const pct  = data.pct_merma || 0;
+      const over = pct > 2.5;
+      badge.style.display = over ? 'block' : 'none';
+      el.innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+          <div style="text-align:center;padding:12px;background:var(--blanco);border-radius:var(--radius-sm)">
+            <div style="font-size:24px;font-weight:800;color:var(--text-dark)">${data.total_merma ?? 0}</div>
+            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Uds merma</div>
+          </div>
+          <div style="text-align:center;padding:12px;background:var(--blanco);border-radius:var(--radius-sm)">
+            <div style="font-size:24px;font-weight:800;color:${over?'var(--error)':'var(--success)'}">
+              ${pct}%
+            </div>
+            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">% Merma</div>
+          </div>
+          <div style="text-align:center;padding:12px;background:var(--blanco);border-radius:var(--radius-sm)">
+            <div style="font-size:24px;font-weight:800;color:var(--text-dark)">${data.total_vendido ?? 0}</div>
+            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Uds vendidas</div>
+          </div>
+        </div>
+        <div style="text-align:center;margin-top:10px;padding:8px;border-radius:var(--radius-sm);background:${over?'#FFF5F5':'#F0FFF4'};font-size:12px;font-weight:600;color:${over?'var(--error)':'var(--success)'}">
+          ${over ? '⚠️ Por encima del umbral (2.5%) — Foto obligatoria para el cierre' : '✅ Dentro del umbral permitido (≤2.5%)'}
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:var(--text-muted);text-align:center">
+          Producción total: ${data.total_produccion ?? 0} ud · Umbral máx: 2.5%
+        </div>`;
+    } catch {
+      el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:13px">Sin datos de mermas para hoy</div>';
+      if (badge) badge.style.display = 'none';
+    }
+  }
+
+</script>
+</body>
+</html>
