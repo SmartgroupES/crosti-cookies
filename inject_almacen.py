@@ -10,7 +10,7 @@ def inject(filepath):
         <div class="filter-bar">
           <select id="almacenTiendaSelect" class="filter-input" onchange="cargarAlmacen()">
             <option value="BCN-01">BCN-01 - Barcelona (Piloto)</option>
-            <option value="MAD-01">MAD-01 - Madrid</option>
+            <option value="MAD-01">MAD-01 - Simulación Madrid</option>
             <option value="VAL-01">VAL-01 - Valencia</option>
           </select>
           <button class="btn" onclick="cargarAlmacen()">↻ Actualizar</button>
@@ -64,7 +64,7 @@ def inject(filepath):
       </div>
 
       <!-- Modal Transferir Stock -->
-      <div id="modalTransferir" class="modal">
+      <div id="modalTransferir" class="modal" style="display:none;">
         <div class="modal-content" style="max-width: 400px">
           <div class="modal-header">
             <h3>Transferir Stock</h3>

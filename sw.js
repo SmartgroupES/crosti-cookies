@@ -4,7 +4,7 @@
 //             Network First para APIs
 // ============================================================
 
-const CACHE_NAME = 'crosti-cookies-v1.2';
+const CACHE_NAME = 'crosti-cookies-v1.5';
 const CACHE_STATIC = [
   './',
   './index.html',

@@ -518,34 +518,57 @@ export default {
 
         const fecha = url.searchParams.get('fecha') || new Date().toISOString().split('T')[0];
 
-        // KPIs del día desde la vista
-        const kpi = await env.CC_DB.prepare(
-          'SELECT * FROM v_kpis_diarios WHERE id_tienda = ? AND fecha = ?'
-        ).bind(id_tienda_req, fecha).first();
+        let kpi, ventasHora, topProductos, personal;
+        
+        if (id_tienda_req === 'TODAS') {
+          kpi = await env.CC_DB.prepare(
+            'SELECT SUM(ventas_netas_eu) as ventas_netas_eu, SUM(num_tickets) as num_tickets, SUM(unidades_vendidas) as unidades_vendidas, SUM(mermas_eu) as mermas_eu, SUM(horas_hombre) as horas_hombre FROM v_kpis_diarios WHERE fecha = ?'
+          ).bind(fecha).first();
+          if (kpi && kpi.num_tickets) kpi.ticket_medio = kpi.ventas_netas_eu / kpi.num_tickets;
+          
+          ventasHora = (await env.CC_DB.prepare(`
+            SELECT hora, SUM(total_linea) as ventas_eu, SUM(cantidad) as unidades FROM ventas_detalladas
+            WHERE fecha = ? GROUP BY hora ORDER BY hora
+          `).bind(fecha).all()).results;
 
-        // Ventas por hora (curva del día)
-        const { results: ventasHora } = await env.CC_DB.prepare(`
-          SELECT hora, SUM(total_linea) as ventas_eu, SUM(cantidad) as unidades
-          FROM ventas_detalladas
-          WHERE id_tienda = ? AND fecha = ?
-          GROUP BY hora ORDER BY hora
-        `).bind(id_tienda_req, fecha).all();
+          topProductos = (await env.CC_DB.prepare(`
+            SELECT vd.id_producto, p.nombre, SUM(vd.cantidad) as unidades, SUM(vd.total_linea) as ventas_eu
+            FROM ventas_detalladas vd JOIN productos p ON vd.id_producto = p.id_producto
+            WHERE vd.fecha = ? GROUP BY vd.id_producto ORDER BY ventas_eu DESC LIMIT 5
+          `).bind(fecha).all()).results;
 
-        // Top 5 productos del día
-        const { results: topProductos } = await env.CC_DB.prepare(`
-          SELECT vd.id_producto, p.nombre, SUM(vd.cantidad) as unidades, SUM(vd.total_linea) as ventas_eu
-          FROM ventas_detalladas vd JOIN productos p ON vd.id_producto = p.id_producto
-          WHERE vd.id_tienda = ? AND vd.fecha = ?
-          GROUP BY vd.id_producto ORDER BY ventas_eu DESC LIMIT 5
-        `).bind(id_tienda_req, fecha).all();
+          personal = (await env.CC_DB.prepare(`
+            SELECT u.nombre, gp.turno, gp.hora_entrada, gp.hora_salida, gp.horas_trabajadas, gp.kpi_ventas_hora
+            FROM gestion_personal gp JOIN usuarios u ON gp.id_operario = u.id
+            WHERE gp.fecha = ? ORDER BY gp.hora_entrada
+          `).bind(fecha).all()).results;
 
-        // Personal del día
-        const { results: personal } = await env.CC_DB.prepare(`
-          SELECT u.nombre, gp.turno, gp.hora_entrada, gp.hora_salida, gp.horas_trabajadas, gp.kpi_ventas_hora
-          FROM gestion_personal gp JOIN usuarios u ON gp.id_operario = u.id
-          WHERE gp.id_tienda = ? AND gp.fecha = ?
-          ORDER BY gp.hora_entrada
-        `).bind(id_tienda_req, fecha).all();
+        } else {
+          kpi = await env.CC_DB.prepare(
+            'SELECT * FROM v_kpis_diarios WHERE id_tienda = ? AND fecha = ?'
+          ).bind(id_tienda_req, fecha).first();
+
+          ventasHora = (await env.CC_DB.prepare(`
+            SELECT hora, SUM(total_linea) as ventas_eu, SUM(cantidad) as unidades
+            FROM ventas_detalladas
+            WHERE id_tienda = ? AND fecha = ?
+            GROUP BY hora ORDER BY hora
+          `).bind(id_tienda_req, fecha).all()).results;
+
+          topProductos = (await env.CC_DB.prepare(`
+            SELECT vd.id_producto, p.nombre, SUM(vd.cantidad) as unidades, SUM(vd.total_linea) as ventas_eu
+            FROM ventas_detalladas vd JOIN productos p ON vd.id_producto = p.id_producto
+            WHERE vd.id_tienda = ? AND vd.fecha = ?
+            GROUP BY vd.id_producto ORDER BY ventas_eu DESC LIMIT 5
+          `).bind(id_tienda_req, fecha).all()).results;
+
+          personal = (await env.CC_DB.prepare(`
+            SELECT u.nombre, gp.turno, gp.hora_entrada, gp.hora_salida, gp.horas_trabajadas, gp.kpi_ventas_hora
+            FROM gestion_personal gp JOIN usuarios u ON gp.id_operario = u.id
+            WHERE gp.id_tienda = ? AND gp.fecha = ?
+            ORDER BY gp.hora_entrada
+          `).bind(id_tienda_req, fecha).all()).results;
+        }
 
         return jsonRes({ fecha, kpi, ventas_hora: ventasHora, top_productos: topProductos, personal });
       }
@@ -562,23 +585,29 @@ export default {
 
         const mes = url.searchParams.get('mes') || new Date().toISOString().slice(0, 7); // YYYY-MM
 
-        const { results } = await env.CC_DB.prepare(`
-          SELECT
-            fecha,
-            SUM(total_linea) as ventas_eu,
-            COUNT(DISTINCT id_venta) as tickets,
-            SUM(cantidad) as unidades
-          FROM ventas_detalladas
-          WHERE id_tienda = ? AND fecha LIKE ?
-          GROUP BY fecha ORDER BY fecha
-        `).bind(id_tienda_req, `${mes}%`).all();
+        let results, facturas;
+        
+        if (id_tienda_req === 'TODAS') {
+          results = (await env.CC_DB.prepare(`
+            SELECT
+              fecha, SUM(total_linea) as ventas_eu, COUNT(DISTINCT id_venta) as tickets, SUM(cantidad) as unidades
+            FROM ventas_detalladas WHERE fecha LIKE ? GROUP BY fecha ORDER BY fecha
+          `).bind(`${mes}%`).all()).results;
 
-        // Food cost real del mes (facturas vs ventas)
-        const { results: facturas } = await env.CC_DB.prepare(`
-          SELECT SUM(total_factura) as total_compras
-          FROM facturas_proveedores
-          WHERE id_tienda = ? AND fecha_factura LIKE ?
-        `).bind(id_tienda_req, `${mes}%`).all();
+          facturas = (await env.CC_DB.prepare(`
+            SELECT SUM(total_factura) as total_compras FROM facturas_proveedores WHERE fecha_factura LIKE ?
+          `).bind(`${mes}%`).all()).results;
+        } else {
+          results = (await env.CC_DB.prepare(`
+            SELECT
+              fecha, SUM(total_linea) as ventas_eu, COUNT(DISTINCT id_venta) as tickets, SUM(cantidad) as unidades
+            FROM ventas_detalladas WHERE id_tienda = ? AND fecha LIKE ? GROUP BY fecha ORDER BY fecha
+          `).bind(id_tienda_req, `${mes}%`).all()).results;
+
+          facturas = (await env.CC_DB.prepare(`
+            SELECT SUM(total_factura) as total_compras FROM facturas_proveedores WHERE id_tienda = ? AND fecha_factura LIKE ?
+          `).bind(id_tienda_req, `${mes}%`).all()).results;
+        }
 
         const ventas_total = results.reduce((a, r) => a + r.ventas_eu, 0);
         const compras_total = facturas[0]?.total_compras || 0;
@@ -652,6 +681,29 @@ export default {
       // ENDPOINTS ADMIN — Global + Escandallos + CRM
       // ══════════════════════════════════════════════════════
 
+      // GET /api/tiendas/metricas — Lista de tiendas agrupables por franquiciado
+      if (request.method === 'GET' && path === '/api/tiendas/metricas') {
+        const { user, error } = await authMiddleware(request, env, 'ADMIN');
+        if (error) return errRes(error, 401);
+
+        const mesActual = new Date().toISOString().slice(0, 7);
+
+        const { results } = await env.CC_DB.prepare(`
+          SELECT 
+            t.id_tienda, t.ciudad, t.perfil, t.franquiciado,
+            COALESCE(SUM(v.total_linea), 0) as ventas_mes,
+            COUNT(DISTINCT v.id_venta) as tickets_mes
+          FROM tiendas t
+          LEFT JOIN ventas_detalladas v 
+            ON t.id_tienda = v.id_tienda 
+            AND v.fecha LIKE ?
+          WHERE t.activa = 1
+          GROUP BY t.id_tienda
+        `).bind(mesActual + '%').all();
+        
+        return jsonRes(results);
+      }
+
       // GET /api/dashboard/global — Panel consolidado multi-tienda
       if (request.method === 'GET' && path === '/api/dashboard/global') {
         const { user, error } = await authMiddleware(request, env, 'ADMIN');
@@ -673,7 +725,7 @@ export default {
           FROM tiendas t
           LEFT JOIN v_kpis_diarios k
             ON k.id_tienda = t.id_tienda AND k.fecha = ?
-          WHERE t.activo = 1
+          WHERE t.activa = 1
           ORDER BY t.id_tienda
         `).bind(fecha, fecha).all();
 
@@ -692,16 +744,50 @@ export default {
         const totalVentas = kpis.reduce((a, k) => a + (k.ventas_netas_eu || 0), 0);
         const totalTickets = kpis.reduce((a, k) => a + (k.num_tickets || 0), 0);
 
+        // Datos del día anterior para métricas comparativas
+        const ayerRes = await env.CC_DB.prepare(`
+          SELECT
+            COALESCE(SUM(num_tickets), 0)       AS num_tickets,
+            COALESCE(SUM(ventas_netas_eu), 0)   AS ventas_netas_eu
+          FROM v_kpis_diarios
+          WHERE fecha = date(?, '-1 day')
+        `).bind(fecha).first();
+        
+        const totalVentasAyer = ayerRes ? ayerRes.ventas_netas_eu : 0;
+        const totalTicketsAyer = ayerRes ? ayerRes.num_tickets : 0;
+        
+        let delta_ventas_pct = 0;
+        if (totalVentasAyer > 0) delta_ventas_pct = Math.round(((totalVentas - totalVentasAyer) / totalVentasAyer) * 100);
+        else if (totalVentas > 0) delta_ventas_pct = 100;
+        
+        let delta_tickets_pct = 0;
+        if (totalTicketsAyer > 0) delta_tickets_pct = Math.round(((totalTickets - totalTicketsAyer) / totalTicketsAyer) * 100);
+        else if (totalTickets > 0) delta_tickets_pct = 100;
+
+        // Top 5 Productos del día
+        const { results: topProductos } = await env.CC_DB.prepare(`
+          SELECT p.nombre, SUM(v.cantidad) as total_cantidad, SUM(v.total_linea) as total_ventas
+          FROM ventas_detalladas v
+          JOIN productos p ON v.id_producto = p.id_producto
+          WHERE v.fecha = ?
+          GROUP BY v.id_producto
+          ORDER BY total_ventas DESC
+          LIMIT 5
+        `).bind(fecha).all();
+
         return jsonRes({
           fecha,
           kpis_tiendas: kpis,
           mermas_tiendas: mermas,
           food_cost_teorico: foodCost,
+          top_productos_dia: topProductos,
           consolidado: {
             ventas_netas_eu: Math.round(totalVentas * 100) / 100,
             total_tickets: totalTickets,
             ticket_medio_red: totalTickets > 0 ? Math.round((totalVentas / totalTickets) * 100) / 100 : 0,
             tiendas_activas: kpis.length,
+            delta_ventas_pct,
+            delta_tickets_pct
           }
         });
       }
@@ -879,6 +965,7 @@ export default {
         const tienda = urlObj.searchParams.get('tienda');
         const desde = urlObj.searchParams.get('desde');
         const hasta = urlObj.searchParams.get('hasta');
+        const include_virtual = urlObj.searchParams.get('include_virtual') === 'true';
 
         let data = [];
         try {
@@ -886,41 +973,57 @@ export default {
             let q = "SELECT id_tienda, fecha, hora, id_producto, cantidad, total_linea, canal FROM ventas_detalladas WHERE fecha >= ? AND fecha <= ?";
             let params = [desde, hasta];
             if (tienda && tienda !== 'TODAS') { q += " AND id_tienda = ?"; params.push(tienda); }
+            else if (!include_virtual) { q += " AND id_tienda IN (SELECT id_tienda FROM tiendas WHERE is_virtual = 0)"; }
             data = (await env.CC_DB.prepare(q).bind(...params).all()).results;
           } 
           else if (tipo === 'inventario') {
             let q = "SELECT * FROM movimientos_inventario WHERE fecha >= ? AND fecha <= ?";
             let params = [desde, hasta];
             if (tienda && tienda !== 'TODAS') { q += " AND id_tienda = ?"; params.push(tienda); }
+            else if (!include_virtual) { q += " AND id_tienda IN (SELECT id_tienda FROM tiendas WHERE is_virtual = 0)"; }
             data = (await env.CC_DB.prepare(q + " ORDER BY fecha DESC, hora DESC").bind(...params).all()).results;
           }
           else if (tipo === 'mermas') {
             let q = "SELECT id_tienda, fecha, id_producto, cantidad_ud, peso_g, motivo, coste_economico FROM control_mermas WHERE fecha >= ? AND fecha <= ?";
             let params = [desde, hasta];
             if (tienda && tienda !== 'TODAS') { q += " AND id_tienda = ?"; params.push(tienda); }
+            else if (!include_virtual) { q += " AND id_tienda IN (SELECT id_tienda FROM tiendas WHERE is_virtual = 0)"; }
             data = (await env.CC_DB.prepare(q).bind(...params).all()).results;
           }
           else if (tipo === 'personal') {
             let q = "SELECT id_tienda, id_operario, fecha, turno, hora_entrada, hora_salida, horas_trabajadas, ventas_periodo FROM gestion_personal WHERE fecha >= ? AND fecha <= ?";
             let params = [desde, hasta];
             if (tienda && tienda !== 'TODAS') { q += " AND id_tienda = ?"; params.push(tienda); }
+            else if (!include_virtual) { q += " AND id_tienda IN (SELECT id_tienda FROM tiendas WHERE is_virtual = 0)"; }
             data = (await env.CC_DB.prepare(q).bind(...params).all()).results;
           }
           else if (tipo === 'food_cost') {
-            // Este reporte es general, no depende de fechas, se extrae la vista teórica actual
             data = (await env.CC_DB.prepare("SELECT * FROM v_food_cost_teorico").all()).results;
           }
           else if (tipo === 'crm') {
             let q = "SELECT id_cliente, nombre, email, segmento, total_visitas, gasto_total_eu, ticket_medio FROM crm_clientes WHERE fecha_registro >= ? AND fecha_registro <= ?";
             let params = [desde, hasta];
             if (tienda && tienda !== 'TODAS') { q += " AND id_tienda_origen = ?"; params.push(tienda); }
+            else if (!include_virtual) { q += " AND id_tienda_origen IN (SELECT id_tienda FROM tiendas WHERE is_virtual = 0)"; }
             data = (await env.CC_DB.prepare(q).bind(...params).all()).results;
           }
           else if (tipo === 'compras') {
             let q = "SELECT id_tienda, proveedor, numero_factura, fecha_factura, id_ingrediente, cantidad, total_factura FROM facturas_proveedores WHERE fecha_factura >= ? AND fecha_factura <= ?";
             let params = [desde, hasta];
             if (tienda && tienda !== 'TODAS') { q += " AND id_tienda = ?"; params.push(tienda); }
+            else if (!include_virtual) { q += " AND id_tienda IN (SELECT id_tienda FROM tiendas WHERE is_virtual = 0)"; }
             data = (await env.CC_DB.prepare(q).bind(...params).all()).results;
+          }
+          else if (tipo === 'ventas-semana') {
+            let q = `
+              SELECT fecha, SUM(total_linea) as ventas_dia 
+              FROM ventas_detalladas 
+              WHERE fecha >= date('now', '-7 days')
+              ${include_virtual ? '' : 'AND id_tienda IN (SELECT id_tienda FROM tiendas WHERE is_virtual = 0)'}
+              GROUP BY fecha
+              ORDER BY fecha ASC
+            `;
+            data = (await env.CC_DB.prepare(q).all()).results;
           }
           else {
             return errRes('Tipo de reporte no válido', 400);
@@ -945,14 +1048,40 @@ export default {
       if (request.method === 'POST' && path === '/api/proveedores') {
         const { error } = await authMiddleware(request, env, 'ADMIN');
         if (error) return errRes(error, 401);
-        const { nombre, contacto, telefono, email, condiciones } = await request.json();
+        const { nombre, tipo, contacto_nombre, contacto_telefono, contacto_email, condiciones_pago } = await request.json();
+        if (!nombre) return errRes('Nombre requerido');
+        
+        const id_proveedor = 'PROV-' + Date.now();
+        await env.CC_DB.prepare(`
+          INSERT INTO proveedores (id_proveedor, nombre, tipo, contacto_nombre, contacto_telefono, contacto_email, condiciones_pago)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `).bind(id_proveedor, nombre, tipo || 'EXTERNO', contacto_nombre || null, contacto_telefono || null, contacto_email || null, condiciones_pago || null).run();
+        return jsonRes({ success: true, id_proveedor }, 201);
+      }
+
+      // PUT /api/proveedores/:id
+      if (request.method === 'PUT' && path.startsWith('/api/proveedores/')) {
+        const { error } = await authMiddleware(request, env, 'ADMIN');
+        if (error) return errRes(error, 401);
+        const id = path.replace('/api/proveedores/', '');
+        const { nombre, tipo, contacto_nombre, contacto_telefono, contacto_email, condiciones_pago } = await request.json();
         if (!nombre) return errRes('Nombre requerido');
         
         await env.CC_DB.prepare(`
-          INSERT INTO proveedores (nombre, contacto, telefono, email, condiciones)
-          VALUES (?, ?, ?, ?, ?)
-        `).bind(nombre, contacto || null, telefono || null, email || null, condiciones || null).run();
-        return jsonRes({ success: true }, 201);
+          UPDATE proveedores 
+          SET nombre=?, tipo=?, contacto_nombre=?, contacto_telefono=?, contacto_email=?, condiciones_pago=?
+          WHERE id_proveedor=?
+        `).bind(nombre, tipo || 'EXTERNO', contacto_nombre || null, contacto_telefono || null, contacto_email || null, condiciones_pago || null, id).run();
+        return jsonRes({ success: true });
+      }
+
+      // DELETE /api/proveedores/:id
+      if (request.method === 'DELETE' && path.startsWith('/api/proveedores/')) {
+        const { error } = await authMiddleware(request, env, 'ADMIN');
+        if (error) return errRes(error, 401);
+        const id = path.replace('/api/proveedores/', '');
+        await env.CC_DB.prepare('DELETE FROM proveedores WHERE id_proveedor=?').bind(id).run();
+        return jsonRes({ success: true });
       }
 
       // GET /api/inventario/stock/:id_tienda
@@ -982,16 +1111,15 @@ export default {
         const { user, error } = await authMiddleware(request, env);
         if (error) return errRes(error, 401);
         
-        const { id_tienda, id_item, tipo_item, cantidad, unidad, origen, destino } = await request.json();
-        if (!id_tienda || !id_item || !tipo_item || !cantidad || !origen || !destino) {
-          return errRes('Faltan campos (id_tienda, id_item, tipo_item, cantidad, unidad, origen, destino)');
+        const { id_tienda_origen, id_tienda_destino, id_item, tipo_item, cantidad, unidad, estado_origen, estado_destino } = await request.json();
+        if (!id_tienda_origen || !id_tienda_destino || !id_item || !tipo_item || !cantidad || !estado_origen || !estado_destino) {
+          return errRes('Faltan campos para la transferencia');
         }
 
         const date = new Date();
         const fecha = date.toISOString().split('T')[0];
         const hora = date.toTimeString().split(' ')[0];
 
-        // Transacción
         const batch = [];
         
         // 1. Restar del origen
@@ -999,7 +1127,7 @@ export default {
           env.CC_DB.prepare(`
             UPDATE inventario_actual SET cantidad = cantidad - ?, ultima_actualizacion = ?
             WHERE id_tienda = ? AND id_item = ? AND estado = ?
-          `).bind(cantidad, date.toISOString(), id_tienda, id_item, origen)
+          `).bind(cantidad, date.toISOString(), id_tienda_origen, id_item, estado_origen)
         );
 
         // 2. Sumar o crear en destino
@@ -1010,19 +1138,65 @@ export default {
             ON CONFLICT(id_tienda, id_item, estado) DO UPDATE SET 
               cantidad = cantidad + excluded.cantidad,
               ultima_actualizacion = excluded.ultima_actualizacion
-          `).bind(id_tienda, id_item, tipo_item, destino, cantidad, unidad || 'ud', date.toISOString())
+          `).bind(id_tienda_destino, id_item, tipo_item, estado_destino, cantidad, unidad || 'ud', date.toISOString())
         );
 
-        // 3. Registrar movimiento
-        batch.push(
-          env.CC_DB.prepare(`
-            INSERT INTO movimientos_inventario (fecha, hora, id_tienda, id_item, tipo_item, cantidad, tipo_movimiento, origen, destino, operario_id)
-            VALUES (?, ?, ?, ?, ?, ?, 'TRANSFERENCIA', ?, ?, ?)
-          `).bind(fecha, hora, id_tienda, id_item, tipo_item, cantidad, origen, destino, user.id)
-        );
+        // 3. Registrar movimiento en ORIGEN
+        if (id_tienda_origen === id_tienda_destino) {
+          // Movimiento interno
+          batch.push(
+            env.CC_DB.prepare(`
+              INSERT INTO movimientos_inventario (fecha, hora, id_tienda, id_item, tipo_item, cantidad, tipo_movimiento, origen, destino, operario_id)
+              VALUES (?, ?, ?, ?, ?, ?, 'TRANSFERENCIA_INT', ?, ?, ?)
+            `).bind(fecha, hora, id_tienda_origen, id_item, tipo_item, cantidad, estado_origen, estado_destino, user.id)
+          );
+        } else {
+          // Movimiento B2B - Salida Origen
+          batch.push(
+            env.CC_DB.prepare(`
+              INSERT INTO movimientos_inventario (fecha, hora, id_tienda, id_item, tipo_item, cantidad, tipo_movimiento, origen, destino, operario_id)
+              VALUES (?, ?, ?, ?, ?, ?, 'ENVIO_B2B', ?, ?, ?)
+            `).bind(fecha, hora, id_tienda_origen, id_item, tipo_item, cantidad, estado_origen, `${id_tienda_destino}(${estado_destino})`, user.id)
+          );
+          // Movimiento B2B - Entrada Destino
+          batch.push(
+            env.CC_DB.prepare(`
+              INSERT INTO movimientos_inventario (fecha, hora, id_tienda, id_item, tipo_item, cantidad, tipo_movimiento, origen, destino, operario_id)
+              VALUES (?, ?, ?, ?, ?, ?, 'RECEPCION_B2B', ?, ?, ?)
+            `).bind(fecha, hora, id_tienda_destino, id_item, tipo_item, cantidad, `${id_tienda_origen}(${estado_origen})`, estado_destino, user.id)
+          );
+        }
 
         await env.CC_DB.batch(batch);
         return jsonRes({ success: true }, 201);
+      }
+
+      // GET /api/inventario/alertas — Alertas de reabastecimiento
+      if (request.method === 'GET' && path === '/api/inventario/alertas') {
+        const { user, error } = await authMiddleware(request, env, 'ADMIN');
+        if (error) return errRes(error, 401);
+
+        const { results } = await env.CC_DB.prepare(`
+          SELECT i.id_ingrediente, i.nombre, i.categoria, i.unidad, i.stock_seguridad_min, i.coste_por_unidad,
+                 COALESCE((SELECT stock_fisico FROM inventarios_diarios d 
+                  WHERE d.id_ingrediente = i.id_ingrediente 
+                  ORDER BY fecha DESC LIMIT 1), 0) as stock_actual
+          FROM ingredientes i
+          WHERE i.activo = 1
+        `).all();
+
+        const alertas = results.filter(r => r.stock_actual <= r.stock_seguridad_min);
+        
+        let capital_inmovilizado = 0;
+        results.forEach(r => {
+          capital_inmovilizado += (r.stock_actual * r.coste_por_unidad);
+        });
+
+        return jsonRes({ 
+          alertas: alertas.sort((a,b) => a.stock_actual - b.stock_actual),
+          total_ingredientes: results.length,
+          capital_inmovilizado: parseFloat(capital_inmovilizado.toFixed(2))
+        });
       }
 
       // GET /api/ingredientes — Listar todos los ingredientes activos
@@ -1143,6 +1317,24 @@ export default {
         return jsonRes({ success: true }, 201);
       }
 
+      // POST /api/crm/clasificar — Clasificar clientes VIP por segmentos de gasto
+      if (request.method === 'POST' && path === '/api/crm/clasificar') {
+        const { user, error } = await authMiddleware(request, env, 'ADMIN');
+        if (error) return errRes(error, 401);
+
+        await env.CC_DB.prepare(`
+          UPDATE crm_clientes 
+          SET segmento = CASE 
+            WHEN gasto_total_eu >= 1000 THEN 'VIP Platino'
+            WHEN gasto_total_eu >= 500 THEN 'VIP Oro'
+            WHEN gasto_total_eu >= 200 THEN 'VIP Plata'
+            ELSE 'Base'
+          END
+        `).run();
+        
+        return jsonRes({ success: true, message: 'Clientes segmentados automáticamente' });
+      }
+
       // GET /api/ventas/ingesta — Endpoint para ingesta automática diaria desde TPV
       if (request.method === 'POST' && path === '/api/ventas/ingesta') {
         // Endpoint semi-público: protegido con API key del TPV (no JWT)
@@ -1184,6 +1376,911 @@ export default {
         object.writeHttpMetadata(headers);
         headers.set('etag', object.httpEtag);
         return new Response(object.body, { headers });
+      }
+
+      // ══════════════════════════════════════════════════════
+      // FRANQUICIAS: FASE 1
+      // ══════════════════════════════════════════════════════
+
+      // POST /api/franquicias/liquidaciones/generar
+      if (request.method === 'POST' && path === '/api/franquicias/liquidaciones/generar') {
+        const { error } = await authMiddleware(request, env, ['ADMIN']);
+        if (error) return errRes(error, 401);
+
+        const { mes } = await request.json();
+        if (!mes) return errRes('Mes requerido (YYYY-MM)', 400);
+
+        const { results: tiendas } = await env.CC_DB.prepare(`
+          SELECT 
+            t.id_tienda, 
+            t.pct_royalty, 
+            t.pct_canon_publicidad,
+            IFNULL(SUM(v.total_linea), 0) as ventas_netas
+          FROM tiendas t
+          LEFT JOIN ventas_detalladas v ON t.id_tienda = v.id_tienda AND strftime('%Y-%m', v.fecha) = ?
+          WHERE t.activa = 1
+          GROUP BY t.id_tienda
+        `).bind(mes).all();
+
+        for (const t of tiendas) {
+          const royalty_eu = (t.ventas_netas * t.pct_royalty) / 100;
+          const canon_eu = (t.ventas_netas * t.pct_canon_publicidad) / 100;
+
+          await env.CC_DB.prepare(`
+            INSERT INTO liquidaciones_mensuales (id_tienda, mes, ventas_netas, royalty_pct, royalty_eu, canon_pct, canon_eu)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id_tienda, mes) DO UPDATE SET
+              ventas_netas = excluded.ventas_netas,
+              royalty_eu = excluded.royalty_eu,
+              canon_eu = excluded.canon_eu
+          `).bind(t.id_tienda, mes, t.ventas_netas, t.pct_royalty, royalty_eu, t.pct_canon_publicidad, canon_eu).run();
+        }
+
+        return jsonRes({ success: true, generadas: tiendas.length });
+      }
+
+      // GET /api/franquicias/liquidaciones
+      if (request.method === 'GET' && path === '/api/franquicias/liquidaciones') {
+        const { user, error } = await authMiddleware(request, env, ['ADMIN', 'FRANQUICIADO']);
+        if (error) return errRes(error, 401);
+
+        let query = `
+          SELECT l.*, t.nombre as tienda 
+          FROM liquidaciones_mensuales l
+          JOIN tiendas t ON l.id_tienda = t.id_tienda
+        `;
+        let params = [];
+        
+        if (user.role === 'FRANQUICIADO') {
+          query += ` WHERE l.id_tienda = ? `;
+          params.push(user.id_tienda);
+        }
+        query += ` ORDER BY l.mes DESC, t.nombre ASC`;
+
+        const { results } = await env.CC_DB.prepare(query).bind(...params).all();
+        return jsonRes(results);
+      }
+
+      // GET /api/franquicias/compliance
+      if (request.method === 'GET' && path === '/api/franquicias/compliance') {
+        const { error } = await authMiddleware(request, env, ['ADMIN']);
+        if (error) return errRes(error, 401);
+
+        const { results } = await env.CC_DB.prepare(`
+          SELECT c.*, t.nombre as tienda
+          FROM v_compliance_compras c
+          JOIN tiendas t ON c.id_tienda = t.id_tienda
+          ORDER BY c.mes DESC, c.id_tienda ASC
+        `).all();
+        return jsonRes(results);
+      }
+
+      // ══════════════════════════════════════════════════════
+      // SOPORTE Y HELPDESK
+      // ══════════════════════════════════════════════════════
+
+      if (request.method === 'GET' && path === '/api/soporte/tickets') {
+        const { user, error } = await authMiddleware(request, env, ['ADMIN', 'FRANQUICIADO']);
+        if (error) return errRes(error, 401);
+
+        let query = `
+          SELECT s.*, t.nombre as tienda 
+          FROM soporte_tickets s
+          JOIN tiendas t ON s.id_tienda = t.id_tienda
+        `;
+        let params = [];
+        if (user.role === 'FRANQUICIADO') {
+          query += ` WHERE s.id_tienda = ? `;
+          params.push(user.id_tienda);
+        }
+        query += ` ORDER BY s.creado_en DESC`;
+
+        const { results } = await env.CC_DB.prepare(query).bind(...params).all();
+        return jsonRes(results);
+      }
+
+      if (request.method === 'POST' && path === '/api/soporte/tickets') {
+        const { user, error } = await authMiddleware(request, env, ['FRANQUICIADO']);
+        if (error) return errRes(error, 401);
+
+        const { asunto, categoria, descripcion } = await request.json();
+        if (!asunto || !categoria || !descripcion) return errRes('Datos incompletos', 400);
+
+        await env.CC_DB.prepare(`
+          INSERT INTO soporte_tickets (id_tienda, asunto, categoria, descripcion)
+          VALUES (?, ?, ?, ?)
+        `).bind(user.id_tienda, asunto, categoria, descripcion).run();
+
+        return jsonRes({ success: true, message: 'Ticket creado exitosamente' });
+      }
+
+      if (request.method === 'PATCH' && path.startsWith('/api/soporte/tickets/')) {
+        const { user, error } = await authMiddleware(request, env, ['ADMIN']);
+        if (error) return errRes(error, 401);
+
+        const id_ticket = path.split('/').pop();
+        const { estado, respuesta_admin } = await request.json();
+
+        await env.CC_DB.prepare(`
+          UPDATE soporte_tickets 
+          SET estado = ?, respuesta_admin = ?, actualizado_en = datetime('now')
+          WHERE id_ticket = ?
+        `).bind(estado, respuesta_admin || null, id_ticket).run();
+
+        return jsonRes({ success: true, message: 'Ticket actualizado' });
+      }
+
+      // ══════════════════════════════════════════════════════
+      // EXPANSIÓN Y ONBOARDING
+      // ══════════════════════════════════════════════════════
+
+      if (request.method === 'GET' && path === '/api/expansion/proyectos') {
+        const { error } = await authMiddleware(request, env, ['ADMIN']);
+        if (error) return errRes(error, 401);
+
+        const { results } = await env.CC_DB.prepare(`
+          SELECT * FROM expansion_proyectos ORDER BY creado_en DESC
+        `).all();
+        
+        for (let p of results) {
+          const { results: tareas } = await env.CC_DB.prepare(`
+            SELECT * FROM expansion_tareas WHERE id_proyecto = ?
+          `).bind(p.id_proyecto).all();
+          p.tareas = tareas;
+        }
+        
+        return jsonRes(results);
+      }
+
+      if (request.method === 'POST' && path === '/api/expansion/proyectos') {
+        const { error } = await authMiddleware(request, env, ['ADMIN']);
+        if (error) return errRes(error, 401);
+
+        const { nombre_franquiciado, ciudad, fecha_estimada_apertura } = await request.json();
+        if (!nombre_franquiciado || !ciudad) return errRes('Datos incompletos', 400);
+
+        const { meta } = await env.CC_DB.prepare(`
+          INSERT INTO expansion_proyectos (nombre_franquiciado, ciudad, fecha_estimada_apertura)
+          VALUES (?, ?, ?)
+        `).bind(nombre_franquiciado, ciudad, fecha_estimada_apertura).run();
+
+        const id_proyecto = meta.last_row_id;
+        
+        const tareas_base = [
+          { fase: 'Búsqueda Local', desc: 'Firma de contrato de reserva del local' },
+          { fase: 'Búsqueda Local', desc: 'Aprobación de la Central del local propuesto' },
+          { fase: 'Contratos', desc: 'Firma del contrato de franquicia final' },
+          { fase: 'Reformas', desc: 'Solicitud de licencia de obra' },
+          { fase: 'Reformas', desc: 'Inicio de obras y adecuación' },
+          { fase: 'Reformas', desc: 'Fin de obra e instalación de maquinaria' },
+          { fase: 'Formación', desc: 'Formación del franquiciado en central' },
+          { fase: 'Formación', desc: 'Formación del equipo en tienda' },
+          { fase: 'Apertura', desc: 'Primer pedido inicial recibido' },
+          { fase: 'Apertura', desc: 'Inauguración y apertura de puertas' }
+        ];
+
+        let stmt = env.CC_DB.prepare(`INSERT INTO expansion_tareas (id_proyecto, fase, descripcion) VALUES (?, ?, ?)`);
+        let batch = tareas_base.map(t => stmt.bind(id_proyecto, t.fase, t.desc));
+        await env.CC_DB.batch(batch);
+
+        return jsonRes({ success: true, message: 'Proyecto de expansión creado' });
+      }
+
+      if (request.method === 'PATCH' && path.startsWith('/api/expansion/proyectos/')) {
+        const { error } = await authMiddleware(request, env, ['ADMIN']);
+        if (error) return errRes(error, 401);
+
+        const id_proyecto = path.split('/').pop();
+        const { estado_proyecto } = await request.json();
+
+        await env.CC_DB.prepare(`
+          UPDATE expansion_proyectos SET estado_proyecto = ? WHERE id_proyecto = ?
+        `).bind(estado_proyecto, id_proyecto).run();
+
+        return jsonRes({ success: true });
+      }
+
+      if (request.method === 'PATCH' && path.startsWith('/api/expansion/tareas/')) {
+        const { error } = await authMiddleware(request, env, ['ADMIN']);
+        if (error) return errRes(error, 401);
+
+        const id_tarea = path.split('/').pop();
+        const { completada } = await request.json();
+
+        await env.CC_DB.prepare(`
+          UPDATE expansion_tareas 
+          SET completada = ?, fecha_completada = CASE WHEN ? THEN date('now') ELSE NULL END
+          WHERE id_tarea = ?
+        `).bind(completada ? 1 : 0, completada ? 1 : 0, id_tarea).run();
+
+        return jsonRes({ success: true });
+      }
+
+      // POST /api/expansion/simular
+      if (request.method === 'POST' && path === '/api/expansion/simular') {
+        const { error } = await authMiddleware(request, env, ['ADMIN']);
+        if (error) return errRes(error, 401);
+
+        const { candidato, ubicacion, tipo, horario, personal, venta_diaria, delivery } = await request.json();
+
+        // Reglas Heurísticas Financieras
+        const dias_mes = 30;
+        let venta_base_mensual = venta_diaria * dias_mes;
+        
+        // Ajustes por tipo de local
+        if (tipo === 'CC') {
+          venta_base_mensual *= 1.15;
+        }
+
+        const calcularEscenario = (modificadorVenta) => {
+          const ventas = venta_base_mensual * modificadorVenta;
+          const food_cost = ventas * 0.26; // 26% de FC
+          const royalties = ventas * 0.05;
+          const marketing = ventas * 0.02;
+          
+          // Costes laborales (estimación 14€/h coste empresa aprox)
+          const laboral = personal * 1600; 
+
+          // Alquiler estimado (CC más caro que Calle)
+          const alquiler = (tipo === 'CC') ? 4500 : 2500;
+          const suministros_fijos = 800;
+          const fijos = alquiler + suministros_fijos;
+
+          const ebitda = ventas - (food_cost + royalties + marketing + laboral + fijos);
+          const ebitda_pct = (ventas > 0) ? (ebitda / ventas) * 100 : 0;
+          
+          return { ventas, food_cost, royalties, marketing, laboral, fijos, ebitda, ebitda_pct };
+        };
+
+        const pesimista = calcularEscenario(0.80);
+        const promedio = calcularEscenario(1.00);
+        const optimista = calcularEscenario(1.25);
+
+        // Score de viabilidad
+        let score = 50;
+        if (promedio.ebitda_pct > 15) score += 20;
+        if (promedio.ebitda_pct > 20) score += 10;
+        if (pesimista.ebitda > 0) score += 20;
+        if ((promedio.fijos / promedio.ventas) > 0.15) score -= 15;
+
+        // Limitar score
+        score = Math.max(0, Math.min(100, score));
+
+        const simulacion = {
+          candidato,
+          ubicacion,
+          tipo,
+          horario,
+          personal,
+          venta_diaria,
+          delivery,
+          score,
+          escenarios: {
+            pesimista,
+            promedio,
+            optimista
+          }
+        };
+
+        // Guardar en BD
+        await env.CC_DB.prepare(`
+          INSERT INTO expansion_simulaciones (
+            nombre_candidato, ubicacion, tipo_local, horario, personal_requerido, 
+            venta_estimada_diaria, pct_delivery, ebitda_estimado_anual, score_viabilidad, datos_json
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+          candidato, ubicacion, tipo, horario, personal, 
+          venta_diaria, delivery, promedio.ebitda * 12, score, JSON.stringify(simulacion)
+        ).run();
+
+        return jsonRes({ success: true, data: simulacion });
+      }
+
+      // ══════════════════════════════════════════════════════
+      // FRANQUICIAS: FASE 2 (AUDITORÍAS QSC)
+      // ══════════════════════════════════════════════════════
+
+      // POST /api/franquicias/auditorias
+      if (request.method === 'POST' && path === '/api/franquicias/auditorias') {
+        const { user, error } = await authMiddleware(request, env, ['ADMIN']);
+        if (error) return errRes(error, 401);
+
+        const { id_tienda, respuestas, observaciones } = await request.json();
+        if (!id_tienda || !respuestas || !Array.isArray(respuestas)) return errRes('Datos inválidos', 400);
+
+        let puntos_obtenidos = 0;
+        let puntos_posibles = 0;
+
+        for (const r of respuestas) {
+          if (r.calificacion !== -1) { // -1 means N/A
+            puntos_posibles += 1;
+            puntos_obtenidos += r.calificacion;
+          }
+        }
+
+        const pct_cumplimiento = puntos_posibles > 0 ? (puntos_obtenidos / puntos_posibles) * 100 : 0;
+        const fecha = new Date().toISOString().split('T')[0];
+
+        const auditoriaResult = await env.CC_DB.prepare(`
+          INSERT INTO auditorias (id_tienda, fecha, auditor_id, puntuacion_obtenida, puntuacion_maxima, pct_cumplimiento, observaciones)
+          VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id_auditoria
+        `).bind(id_tienda, fecha, user.id, puntos_obtenidos, puntos_posibles, pct_cumplimiento, observaciones || null).first();
+
+        const id_auditoria = auditoriaResult.id_auditoria;
+
+        for (const r of respuestas) {
+          await env.CC_DB.prepare(`
+            INSERT INTO auditoria_respuestas (id_auditoria, categoria, pregunta, calificacion, notas_adicionales)
+            VALUES (?, ?, ?, ?, ?)
+          `).bind(id_auditoria, r.categoria, r.pregunta, r.calificacion, r.notas || null).run();
+        }
+
+        return jsonRes({ success: true, id_auditoria, pct_cumplimiento });
+      }
+
+      // GET /api/franquicias/auditorias
+      if (request.method === 'GET' && path === '/api/franquicias/auditorias') {
+        const { error } = await authMiddleware(request, env, ['ADMIN']);
+        if (error) return errRes(error, 401);
+
+        const { results } = await env.CC_DB.prepare(`
+          SELECT a.*, t.nombre as tienda, u.nombre as auditor
+          FROM auditorias a
+          JOIN tiendas t ON a.id_tienda = t.id_tienda
+          LEFT JOIN usuarios u ON a.auditor_id = u.id
+          ORDER BY a.creado_en DESC
+        `).all();
+        return jsonRes(results);
+      }
+
+      // GET /api/franquicias/auditorias/:id
+      if (request.method === 'GET' && path.startsWith('/api/franquicias/auditorias/')) {
+        const { error } = await authMiddleware(request, env, ['ADMIN']);
+        if (error) return errRes(error, 401);
+
+        const id_auditoria = path.replace('/api/franquicias/auditorias/', '');
+        const auditoria = await env.CC_DB.prepare('SELECT * FROM auditorias WHERE id_auditoria = ?').bind(id_auditoria).first();
+        if (!auditoria) return errRes('Auditoría no encontrada', 404);
+
+        const { results: respuestas } = await env.CC_DB.prepare('SELECT * FROM auditoria_respuestas WHERE id_auditoria = ?').bind(id_auditoria).all();
+        
+        return jsonRes({ auditoria, respuestas });
+      }
+
+      // ══════════════════════════════════════════════════════
+      // FRANQUICIAS: FASE 3 (SOLICITUDES DE EXPANSIÓN)
+      // ══════════════════════════════════════════════════════
+
+      // POST /api/franquicias/solicitudes (Público)
+      if (request.method === 'POST' && path === '/api/franquicias/solicitudes') {
+        const { nombre_completo, email, telefono, ciudad_interes, capital_disponible } = await request.json();
+        if (!nombre_completo || !email || !telefono || !ciudad_interes || !capital_disponible) {
+          return errRes('Todos los campos son obligatorios', 400);
+        }
+
+        await env.CC_DB.prepare(`
+          INSERT INTO solicitudes_franquicia (nombre_completo, email, telefono, ciudad_interes, capital_disponible)
+          VALUES (?, ?, ?, ?, ?)
+        `).bind(nombre_completo, email, telefono, ciudad_interes, capital_disponible).run();
+
+        return jsonRes({ success: true, message: 'Solicitud enviada correctamente' }, 201);
+      }
+
+      // GET /api/franquicias/solicitudes (Privado - ADMIN)
+      if (request.method === 'GET' && path === '/api/franquicias/solicitudes') {
+        const { error } = await authMiddleware(request, env, ['ADMIN']);
+        if (error) return errRes(error, 401);
+
+        const { results } = await env.CC_DB.prepare(`
+          SELECT * FROM solicitudes_franquicia ORDER BY creado_en DESC
+        `).all();
+        
+        return jsonRes(results);
+      }
+
+      // PATCH /api/franquicias/solicitudes/:id/estado (Privado - ADMIN)
+      if (request.method === 'PATCH' && path.startsWith('/api/franquicias/solicitudes/') && path.endsWith('/estado')) {
+        const { error } = await authMiddleware(request, env, ['ADMIN']);
+        if (error) return errRes(error, 401);
+
+        const id_solicitud = path.replace('/api/franquicias/solicitudes/', '').replace('/estado', '');
+        const { estado } = await request.json();
+        
+        if (!estado) return errRes('Estado requerido', 400);
+
+        await env.CC_DB.prepare(`
+          UPDATE solicitudes_franquicia SET estado = ? WHERE id_solicitud = ?
+        `).bind(estado, id_solicitud).run();
+
+        return jsonRes({ success: true });
+      }
+
+      // ══════════════════════════════════════════════════════
+      // FRANQUICIAS: FASE 4 (OPERACIONES Y SOPORTE)
+      // ══════════════════════════════════════════════════════
+
+      // TICKETS
+      if (request.method === 'POST' && path === '/api/franquicias/tickets') {
+        const { error, user } = await authMiddleware(request, env, ['FRANQUICIADO', 'ADMIN']);
+        if (error) return errRes(error, 401);
+
+        const { id_tienda, asunto, categoria } = await request.json();
+        if (!id_tienda || !asunto || !categoria) return errRes('Datos incompletos', 400);
+
+        await env.CC_DB.prepare(`
+          INSERT INTO tickets_soporte (id_tienda, asunto, categoria) VALUES (?, ?, ?)
+        `).bind(id_tienda, asunto, categoria).run();
+
+        return jsonRes({ success: true });
+      }
+
+      if (request.method === 'GET' && path === '/api/franquicias/tickets') {
+        const { error, user } = await authMiddleware(request, env, ['FRANQUICIADO', 'ADMIN']);
+        if (error) return errRes(error, 401);
+
+        const url = new URL(request.url);
+        const tiendaId = url.searchParams.get('id_tienda');
+        
+        let q = 'SELECT t.*, d.nombre as tienda_nombre FROM tickets_soporte t JOIN tiendas d ON t.id_tienda = d.id_tienda';
+        let params = [];
+        if (user.rol === 'FRANQUICIADO' || tiendaId) {
+          q += ' WHERE t.id_tienda = ?';
+          params.push(tiendaId || user.id_tienda);
+        }
+        q += ' ORDER BY t.creado_en DESC';
+        
+        const { results } = await env.CC_DB.prepare(q).bind(...params).all();
+        return jsonRes(results);
+      }
+
+      if (request.method === 'PATCH' && path.startsWith('/api/franquicias/tickets/') && path.endsWith('/estado')) {
+        const { error } = await authMiddleware(request, env, ['ADMIN']);
+        if (error) return errRes(error, 401);
+
+        const id_ticket = path.replace('/api/franquicias/tickets/', '').replace('/estado', '');
+        const { estado } = await request.json();
+        
+        await env.CC_DB.prepare('UPDATE tickets_soporte SET estado = ? WHERE id_ticket = ?').bind(estado, id_ticket).run();
+        return jsonRes({ success: true });
+      }
+
+      // OPEX (P&L)
+      if (request.method === 'POST' && path === '/api/franquicias/opex') {
+        const { error, user } = await authMiddleware(request, env, ['FRANQUICIADO', 'ADMIN']);
+        if (error) return errRes(error, 401);
+
+        const { id_tienda, mes, alquiler, suministros, seguros, personal, otros_gastos } = await request.json();
+        if (!id_tienda || !mes) return errRes('Tienda y mes obligatorios', 400);
+
+        await env.CC_DB.prepare(`
+          INSERT INTO opex_franquiciado (id_tienda, mes, alquiler, suministros, seguros, personal, otros_gastos)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(id_tienda, mes) DO UPDATE SET 
+            alquiler=excluded.alquiler,
+            suministros=excluded.suministros,
+            seguros=excluded.seguros,
+            personal=excluded.personal,
+            otros_gastos=excluded.otros_gastos
+        `).bind(id_tienda, mes, alquiler || 0, suministros || 0, seguros || 0, personal || 0, otros_gastos || 0).run();
+
+        return jsonRes({ success: true });
+      }
+
+      if (request.method === 'GET' && path === '/api/franquicias/opex') {
+        const { error, user } = await authMiddleware(request, env, ['FRANQUICIADO', 'ADMIN']);
+        if (error) return errRes(error, 401);
+
+        const url = new URL(request.url);
+        const tiendaId = url.searchParams.get('id_tienda');
+        const mes = url.searchParams.get('mes');
+        
+        let q = 'SELECT o.*, d.nombre as tienda_nombre FROM opex_franquiciado o JOIN tiendas d ON o.id_tienda = d.id_tienda WHERE 1=1';
+        let params = [];
+        
+        if (user.rol === 'FRANQUICIADO') {
+          q += ' AND o.id_tienda = ?';
+          params.push(user.id_tienda);
+        } else if (tiendaId) {
+          q += ' AND o.id_tienda = ?';
+          params.push(tiendaId);
+        }
+
+        if (mes) {
+          q += ' AND o.mes = ?';
+          params.push(mes);
+        }
+        
+        q += ' ORDER BY o.mes DESC, o.id_tienda ASC';
+        
+        const { results } = await env.CC_DB.prepare(q).bind(...params).all();
+        return jsonRes(results);
+      }
+
+      // ══════════════════════════════════════════════════════
+      // FRANQUICIAS: FASE 5 (MARKETING, PUBLICIDAD Y ROI)
+      // ══════════════════════════════════════════════════════
+
+      // CAMPANAS
+      if (request.method === 'GET' && path === '/api/franquicias/marketing/campanas') {
+        const { error, user } = await authMiddleware(request, env, ['FRANQUICIADO', 'ADMIN']);
+        if (error) return errRes(error, 401);
+
+        const { results } = await env.CC_DB.prepare('SELECT * FROM campanas_marketing ORDER BY creado_en DESC').all();
+        return jsonRes(results);
+      }
+
+      if (request.method === 'POST' && path === '/api/franquicias/marketing/campanas') {
+        const { error } = await authMiddleware(request, env, ['ADMIN']);
+        if (error) return errRes(error, 401);
+
+        const { nombre, descripcion, fecha_inicio, fecha_fin, presupuesto, tipo } = await request.json();
+        if (!nombre || !fecha_inicio || !fecha_fin || !tipo) return errRes('Datos incompletos', 400);
+
+        await env.CC_DB.prepare(`
+          INSERT INTO campanas_marketing (nombre, descripcion, fecha_inicio, fecha_fin, presupuesto, tipo)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).bind(nombre, descripcion || '', fecha_inicio, fecha_fin, presupuesto || 0, tipo).run();
+
+        return jsonRes({ success: true });
+      }
+
+      // ROI MARKETING
+      if (request.method === 'GET' && path === '/api/franquicias/marketing/roi') {
+        const { error, user } = await authMiddleware(request, env, ['FRANQUICIADO', 'ADMIN']);
+        if (error) return errRes(error, 401);
+
+        const url = new URL(request.url);
+        const tiendaId = url.searchParams.get('id_tienda');
+        const campanaId = url.searchParams.get('id_campana');
+        
+        let q = `
+          SELECT r.*, c.nombre as campana_nombre, c.tipo as campana_tipo, d.nombre as tienda_nombre 
+          FROM roi_marketing_tienda r
+          JOIN campanas_marketing c ON r.id_campana = c.id_campana
+          JOIN tiendas d ON r.id_tienda = d.id_tienda
+          WHERE 1=1
+        `;
+        let params = [];
+
+        if (user.rol === 'FRANQUICIADO') {
+          q += ' AND r.id_tienda = ?';
+          params.push(user.id_tienda);
+        } else if (tiendaId) {
+          q += ' AND r.id_tienda = ?';
+          params.push(tiendaId);
+        }
+
+        if (campanaId) {
+          q += ' AND r.id_campana = ?';
+          params.push(campanaId);
+        }
+
+        q += ' ORDER BY r.creado_en DESC';
+
+        const { results } = await env.CC_DB.prepare(q).bind(...params).all();
+        return jsonRes(results);
+      }
+
+      if (request.method === 'POST' && path === '/api/franquicias/marketing/roi') {
+        const { error, user } = await authMiddleware(request, env, ['FRANQUICIADO', 'ADMIN']);
+        if (error) return errRes(error, 401);
+
+        const { id_campana, id_tienda, inversion_real, tickets_promocion, ventas_atribuidas } = await request.json();
+        if (!id_campana || !id_tienda) return errRes('Faltan datos clave', 400);
+
+        // Si es franquiciado solo puede cargar ROI de su tienda
+        if (user.rol === 'FRANQUICIADO' && user.id_tienda !== id_tienda) {
+           return errRes('No autorizado', 403);
+        }
+
+        await env.CC_DB.prepare(`
+          INSERT INTO roi_marketing_tienda (id_campana, id_tienda, inversion_real, tickets_promocion, ventas_atribuidas)
+          VALUES (?, ?, ?, ?, ?)
+          ON CONFLICT(id_campana, id_tienda) DO UPDATE SET 
+            inversion_real = excluded.inversion_real,
+            tickets_promocion = excluded.tickets_promocion,
+            ventas_atribuidas = excluded.ventas_atribuidas
+        `).bind(id_campana, id_tienda, inversion_real || 0, tickets_promocion || 0, ventas_atribuidas || 0).run();
+
+        return jsonRes({ success: true });
+      }
+
+      // ══════════════════════════════════════════════════════
+      // PREDICCIONES Y ALGORITMOS
+      // ══════════════════════════════════════════════════════
+
+      // GET /api/predict/demand/:tienda
+      if (request.method === 'GET' && path.match(/^\/api\/predict\/demand\/[^/]+$/)) {
+        const { user, error } = await authMiddleware(request, env, ['ADMIN']);
+        if (error) return errRes(error, 401);
+
+        const tienda_target = path.split('/').pop();
+        
+        // 1. Obtener datos de la tienda
+        const tiendaInfo = await env.CC_DB.prepare(`SELECT ciudad FROM tiendas WHERE id_tienda = ?`).bind(tienda_target).first();
+        const ciudad = tiendaInfo ? tiendaInfo.ciudad : 'Madrid';
+        
+        // 2. Factores Externos (Calendario de Eventos) para MAÑANA
+        const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+        const eventosRes = await env.CC_DB.prepare(`
+          SELECT descripcion, multiplicador_demanda 
+          FROM calendario_eventos 
+          WHERE fecha = ? AND ciudad = ?
+        `).bind(tomorrow, ciudad).all();
+        
+        let multiplicador_externo = 1.0;
+        let factores_activos = ['Histórico YoY', 'Día de la semana'];
+        
+        if (eventosRes && eventosRes.results && eventosRes.results.length > 0) {
+          eventosRes.results.forEach(ev => {
+            multiplicador_externo *= ev.multiplicador_demanda;
+            factores_activos.push(ev.descripcion);
+          });
+        }
+        
+        // 3. Calcular Tendencia de Crecimiento (Últimos 28 días vs Mismos 28 días Año Anterior)
+        const fecha_inicio_last_year = `date('now', '+1 day', '-1 year', '-28 days')`;
+        const fecha_fin_last_year = `date('now', '+1 day', '-1 year')`;
+        
+        const trendRes = await env.CC_DB.prepare(`
+          SELECT 
+            SUM(CASE WHEN fecha >= date('now', '-28 days') THEN cantidad ELSE 0 END) as ventas_current,
+            SUM(CASE WHEN fecha >= ${fecha_inicio_last_year} AND fecha <= ${fecha_fin_last_year} THEN cantidad ELSE 0 END) as ventas_last_year
+          FROM ventas_detalladas
+          WHERE id_tienda = ?
+        `).bind(tienda_target).first();
+        
+        let tendencia = 1.0;
+        if (trendRes && trendRes.ventas_last_year > 0) {
+          tendencia = trendRes.ventas_current / trendRes.ventas_last_year;
+          // Limitar tendencia para evitar picos extremos por falta de datos
+          if(tendencia > 2.0) tendencia = 2.0;
+          if(tendencia < 0.5) tendencia = 0.5;
+        }
+        
+        // 4. Base Predictiva: Promedio 4 semanas actuales y Promedio 4 semanas YoY
+        const dbResCurrent = await env.CC_DB.prepare(`
+          SELECT v.id_producto, p.nombre, ROUND(SUM(v.cantidad) / 4.0, 1) as cant_base
+          FROM ventas_detalladas v JOIN productos p ON v.id_producto = p.id_producto
+          WHERE v.id_tienda = ? AND v.fecha >= date('now', '-28 days') AND strftime('%w', v.fecha) = strftime('%w', date('now', '+1 day'))
+          GROUP BY v.id_producto
+        `).bind(tienda_target).all();
+
+        const dbResLastYear = await env.CC_DB.prepare(`
+          SELECT id_producto, ROUND(SUM(cantidad) / 4.0, 1) as cant_yoy
+          FROM ventas_detalladas
+          WHERE id_tienda = ? AND fecha >= ${fecha_inicio_last_year} AND fecha <= ${fecha_fin_last_year} AND strftime('%w', fecha) = strftime('%w', date('now', '+1 day'))
+          GROUP BY id_producto
+        `).bind(tienda_target).all();
+
+        const predicciones = [];
+        dbResCurrent.results.forEach(row => {
+          const yoyRow = dbResLastYear.results.find(y => y.id_producto === row.id_producto);
+          let base_calc = 0;
+          if (yoyRow && yoyRow.cant_yoy > 0) {
+            base_calc = yoyRow.cant_yoy * tendencia;
+          } else {
+            base_calc = row.cant_base; // Fallback
+            if(!factores_activos.includes('Fallback 4-semanas (Sin datos YoY)')) {
+               factores_activos = factores_activos.filter(f => f !== 'Histórico YoY');
+               factores_activos.push('Fallback 4-semanas (Sin datos YoY)');
+            }
+          }
+          
+          let final_calc = Math.round(base_calc * multiplicador_externo * 10) / 10;
+          
+          predicciones.push({
+            id_producto: row.id_producto,
+            nombre: row.nombre,
+            cantidad_estimada: final_calc,
+            confianza_pct: (yoyRow && yoyRow.cant_yoy > 0) ? 95 : 80
+          });
+        });
+        
+        predicciones.sort((a,b) => b.cantidad_estimada - a.cantidad_estimada);
+
+        const mockPrediction = {
+          tienda: tienda_target,
+          fecha_proyectada: tomorrow,
+          predicciones: predicciones,
+          factores_considerados: factores_activos
+        };
+        
+        return jsonRes(mockPrediction);
+      }
+
+      // GET /api/predict/production
+      if (request.method === 'GET' && path === '/api/predict/production') {
+        const { user, error } = await authMiddleware(request, env, ['ADMIN']);
+        if (error) return errRes(error, 401);
+        const urlObj = new URL(request.url);
+        const include_virtual = urlObj.searchParams.get('include_virtual') === 'true';
+        
+        let q_demand = `
+          SELECT 
+              p.id_producto,
+              p.nombre,
+              SUM(v.cantidad) / 4.0 as total_estimado
+          FROM ventas_detalladas v
+          JOIN tiendas t ON v.id_tienda = t.id_tienda
+          JOIN productos p ON v.id_producto = p.id_producto
+          WHERE v.fecha >= date('now', '-28 days')
+            AND strftime('%w', v.fecha) = strftime('%w', date('now', '+1 day'))
+            ${include_virtual ? '' : 'AND t.is_virtual = 0'}
+            AND p.categoria = 'GALLETAS'
+          GROUP BY p.id_producto, p.nombre
+        `;
+        
+        const demandRes = await env.CC_DB.prepare(q_demand).all();
+        
+        let produccion_estimada = [];
+        let total_unidades = 0;
+        let total_kilos = 0;
+
+        for (const d of demandRes.results) {
+           const unidades = Math.round(d.total_estimado);
+           // Asumiendo 120g por unidad de masa
+           const kilos_masa = parseFloat((unidades * 0.12).toFixed(2)); 
+           
+           total_unidades += unidades;
+           total_kilos += kilos_masa;
+
+           produccion_estimada.push({
+             id_producto: d.id_producto,
+             nombre: d.nombre,
+             unidades: unidades,
+             kilos_masa: kilos_masa
+           });
+        }
+        
+        // Ordenar por unidades de mayor a menor
+        produccion_estimada.sort((a,b) => b.unidades - a.unidades);
+
+        const productionRes = {
+          fecha_produccion: new Date().toISOString().split('T')[0],
+          detalle_produccion: produccion_estimada,
+          totales: {
+            unidades: total_unidades,
+            kilos_masa: parseFloat(total_kilos.toFixed(2))
+          },
+          alertas_abastecimiento: []
+        };
+        
+        return jsonRes(productionRes);
+      }
+
+      // GET /api/personal/cuadrantes/generar
+      if (request.method === 'GET' && path === '/api/personal/cuadrantes/generar') {
+        const { user, error } = await authMiddleware(request, env, ['ADMIN', 'FRANQUICIADO']);
+        if (error) return errRes(error, 401);
+
+        const tienda = url.searchParams.get('tienda');
+        if (!tienda) return errRes('Falta el parámetro tienda', 400);
+        
+        // Consultar el promedio de ventas por hora de la tienda en los últimos 28 días
+        const { results: ventasHora } = await env.CC_DB.prepare(`
+          SELECT hora, SUM(total_linea) / 28.0 as promedio_hora
+          FROM ventas_detalladas
+          WHERE id_tienda = ? AND fecha >= date('now', '-28 days')
+          GROUP BY hora
+          ORDER BY hora
+        `).bind(tienda).all();
+
+        let turnos = [];
+        const umbralExtra = 150;
+        
+        ventasHora.forEach(v => {
+          let staff_necesario = 1; // Mínimo 1 operador base
+          if (v.promedio_hora > umbralExtra) {
+            staff_necesario += Math.floor(v.promedio_hora / umbralExtra);
+          }
+          
+          turnos.push({
+            hora: `${String(v.hora).padStart(2, '0')}:00`,
+            promedio_eur: parseFloat(v.promedio_hora.toFixed(2)),
+            staff_recomendado: staff_necesario
+          });
+        });
+
+        // Fallback si no hay ventas (ej. simulación para BCN-01 o MAD-01)
+        if (turnos.length === 0) {
+           for (let h = 11; h <= 20; h++) {
+             turnos.push({
+               hora: `${String(h).padStart(2, '0')}:00`,
+               promedio_eur: h >= 16 && h <= 19 ? 220 : 85,
+               staff_recomendado: h >= 16 && h <= 19 ? 2 : 1
+             });
+           }
+        }
+
+        return jsonRes({
+          tienda: tienda,
+          umbral_refuerzo_eur: umbralExtra,
+          cuadrante: turnos
+        });
+      }
+
+      // ══════════════════════════════════════════════════════
+      // ASESOR DE MARKETING IA
+      // ══════════════════════════════════════════════════════
+      if (request.method === 'GET' && path === '/api/ai/marketing-advisor') {
+        const { user, error } = await authMiddleware(request, env, 'ADMIN');
+        if (error) return errRes(error, 401);
+
+        const tiendaFiltro = url.searchParams.get('tienda') || 'GLOBAL'; // BCN-01, MAD-01 o GLOBAL
+
+        // Extraer los últimos registros de Instagram
+        const { results: ig_kpis } = await env.CC_DB.prepare(
+          'SELECT * FROM instagram_kpis ORDER BY fecha DESC LIMIT 4'
+        ).all();
+
+        // Extraer Top Productos de los últimos 7 días
+        let queryVentas = `
+          SELECT p.nombre, SUM(v.total_linea) as ingresos
+          FROM ventas_detalladas v
+          JOIN productos p ON v.id_producto = p.id_producto
+          WHERE v.fecha >= date('now', '-7 days')
+        `;
+        let paramsVentas = [];
+        if (tiendaFiltro !== 'GLOBAL') {
+          queryVentas += ` AND v.id_tienda = ? `;
+          paramsVentas.push(tiendaFiltro);
+        }
+        queryVentas += ` GROUP BY v.id_producto ORDER BY ingresos DESC LIMIT 3`;
+
+        const { results: topProductos } = await env.CC_DB.prepare(queryVentas).bind(...paramsVentas).all();
+
+        // Construir la estrategia basada en reglas (simulando una IA)
+        let seguidoresActuales = ig_kpis.length > 0 ? ig_kpis[0].seguidores : 0;
+        let crecimientoSeguidores = 0;
+        if (ig_kpis.length > 1) {
+          crecimientoSeguidores = ig_kpis[0].seguidores - ig_kpis[1].seguidores;
+        }
+
+        let productosTopText = topProductos.length > 0 
+          ? topProductos.map(p => p.nombre).join(', ') 
+          : 'Galleta Clásica, Nutella Bomb, Red Velvet';
+
+        let estrategia = `### Análisis Semanal: Instagram vs Ventas\n\n`;
+        estrategia += `**Rendimiento Social**: Actualmente contamos con **${seguidoresActuales.toLocaleString()} seguidores** orgánicos. En la última semana, hemos visto una variación de **${crecimientoSeguidores > 0 ? '+' : ''}${crecimientoSeguidores} seguidores**, lo que indica que el engagement promedio (${ig_kpis.length>0 ? ig_kpis[0].likes_promedio : 0} likes/post) mantiene un alcance de marca estable.\n\n`;
+        
+        let ambitoText = tiendaFiltro === 'GLOBAL' ? 'nivel nacional' : `la tienda ${tiendaFiltro}`;
+        estrategia += `**Tendencias de Producto**: Los productos más vendidos a **${ambitoText}** en los últimos 7 días son: **${productosTopText}**. \n\n`;
+        
+        estrategia += `**Estrategia Recomendada (Crosti IA Advisor)**:\n`;
+        estrategia += `- **Foco de Contenido (Reels)**: Crea videos cortos mostrando el proceso artesanal del obrador para los productos estrella (*${productosTopText}*). Estos productos ya tienen alta demanda y excelente retorno (ROI).\n`;
+        
+        if (tiendaFiltro === 'GLOBAL') {
+           estrategia += `- **Impulso de Marca Global**: Crea campañas de expectación ("hype") a nivel nacional. Promueve votaciones en historias sobre próximos sabores para fomentar comunidad.\n`;
+        } else if (tiendaFiltro === 'MAD-01') {
+           estrategia += `- **Impulso Local Madrid**: Invita a la comunidad a probar estos productos directamente en la tienda piloto de Madrid (C. de Ferrer del Río, 24) mencionando que son "los favoritos de la capital".\n`;
+        } else if (tiendaFiltro === 'BCN-01') {
+           estrategia += `- **Impulso Local Barcelona**: Lanza una promoción flash geolocalizada en Instagram invitando a la comunidad a visitar la tienda de BCN (Carrer de Llull, 223) usando el código #CrostiBCN.\n`;
+        }
+
+        estrategia += `- **Interacción (Historias)**: Publica hoy 2 historias con encuestas preguntando a tu audiencia cuál de estos productos prefieren. Esto entrenará al algoritmo de Instagram para mostrar tus próximas publicaciones a más usuarios.\n`;
+
+        return jsonRes({
+          success: true,
+          tienda: tiendaFiltro,
+          instagram_kpis: ig_kpis,
+          estrategia_ia: estrategia
+        });
+      }
+
+      // POST /api/instagram/kpis
+      if (request.method === 'POST' && path === '/api/instagram/kpis') {
+        const { user, error } = await authMiddleware(request, env, 'ADMIN');
+        if (error) return errRes(error, 401);
+        
+        const { fecha, seguidores, publicaciones, likes, comentarios, alcance } = await request.json();
+        
+        await env.CC_DB.prepare(`
+          INSERT OR REPLACE INTO instagram_kpis (fecha, seguidores, publicaciones_totales, likes_promedio, comentarios_promedio, alcance_estimado)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).bind(fecha || new Date().toISOString().split('T')[0], seguidores||0, publicaciones||0, likes||0, comentarios||0, alcance||0).run();
+        
+        return jsonRes({ success: true, message: 'KPIs de Instagram registrados correctamente' });
       }
 
       // ══════════════════════════════════════════════════════

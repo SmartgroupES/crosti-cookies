@@ -20,7 +20,7 @@ def inject(filepath):
           <select id="repTiendaSelect" class="filter-input">
             <option value="TODAS">Todas las tiendas (Consolidado)</option>
             <option value="BCN-01">BCN-01 - Barcelona (Piloto)</option>
-            <option value="MAD-01">MAD-01 - Madrid</option>
+            <option value="MAD-01">MAD-01 - Simulación Madrid</option>
             <option value="VAL-01">VAL-01 - Valencia</option>
           </select>
           <input type="date" id="repDesde" class="filter-input">
@@ -105,7 +105,7 @@ def inject(filepath):
       </div>
 
       <!-- Modal Vista Previa de Reporte -->
-      <div id="modalReporte" class="modal">
+      <div id="modalReporte" class="modal" style="display:none;">
         <div class="modal-content" style="max-width: 900px; max-height: 80vh; overflow-y: auto;">
           <div class="modal-header">
             <h3 id="modalReporteTitulo">Vista Previa</h3>

@@ -22,13 +22,16 @@ CREATE TABLE tiendas (
     nif_franquiciado TEXT,
     fecha_apertura  TEXT,
     activa          INTEGER DEFAULT 1,
+    is_virtual      INTEGER DEFAULT 0,
+    pct_royalty     REAL DEFAULT 5.0,
+    pct_canon_publicidad REAL DEFAULT 2.0,
     creado_en       TEXT DEFAULT (datetime('now'))
 );
 
 INSERT INTO tiendas VALUES
-    ('BCN-01','Crosti Cookies Barcelona','Barcelona','Carrer de Provença, 123','08008',41.3888,2.1653,'Boutique Regalo','Piloto Barcelona','bcn@crosticookies.com','+34600000001','B12345678','2024-09-01',1,datetime('now')),
-    ('MAD-01','Crosti Cookies Madrid Salamanca','Madrid','Calle de Serrano, 45','28001',40.4268,-3.6893,'Boutique Regalo','Pendiente Asignación','mad@crosticookies.com','+34600000002',NULL,'2027-03-01',1,datetime('now')),
-    ('VAL-01','Crosti Cookies Valencia','Valencia','Calle de Colón, 78','46004',39.4699,-0.3763,'High Traffic Impulse','Pendiente Asignación','val@crosticookies.com','+34600000003',NULL,'2027-06-01',1,datetime('now'));
+    ('BCN-00','Obrador Central Crosti Cookies','Barcelona','[Dirección del Obrador]','08000',41.38,2.16,'Centro de Producción y Logística','Central Crosti','obrador@crosticookies.com','+34600000000',NULL,'2024-01-01',1,0,0.0,0.0,datetime('now')),
+    ('BCN-01','Crosti Cookies Barcelona','Barcelona','Carrer de Provença, 123','08008',41.3888,2.1653,'Boutique Regalo','Piloto Barcelona','bcn@crosticookies.com','+34600000001','B12345678','2024-09-01',1,0,5.0,2.0,datetime('now')),
+    ('MAD-01','Simulación Madrid','Madrid','Virtual','28000',40.4168,-3.7038,'Tienda Simulación','Dataset Manager','mad@crosticookies.com','+34000000000',NULL,'2024-01-01',1,1,5.0,2.0,datetime('now'));
 
 -- ── TABLA 2: USUARIOS ────────────────────────────────────────
 DROP TABLE IF EXISTS usuarios;
@@ -416,3 +419,135 @@ ALTER TABLE facturas_proveedores ADD COLUMN id_proveedor TEXT;
 
 -- 5. Llenar inventario inicial a partir de facturas existentes (simulación)
 -- (Opcional) Podemos empezar a 0 y que hagan un recuento de apertura.
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- MÓDULO DE MARKETING & PUBLICIDAD
+-- ════════════════════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS campanas_marketing (
+    id_campana    TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(8)))),
+    nombre        TEXT NOT NULL,
+    descripcion   TEXT,
+    fecha_inicio  TEXT NOT NULL,
+    fecha_fin     TEXT NOT NULL,
+    tipo          TEXT NOT NULL, -- 'REDES_SOCIALES', 'LOCAL', 'INFLUENCER', 'OOH'
+    presupuesto   REAL NOT NULL DEFAULT 0,
+    estado        TEXT DEFAULT 'ACTIVA', -- 'ACTIVA', 'PAUSADA', 'FINALIZADA'
+    creado_en     TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS roi_marketing_tienda (
+    id_registro        TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(8)))),
+    id_campana         TEXT NOT NULL,
+    id_tienda          TEXT NOT NULL,
+    inversion_real     REAL NOT NULL DEFAULT 0,
+    tickets_promocion  INTEGER NOT NULL DEFAULT 0,
+    ventas_atribuidas  REAL NOT NULL DEFAULT 0,
+    creado_en          TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (id_campana) REFERENCES campanas_marketing(id_campana),
+    FOREIGN KEY (id_tienda) REFERENCES tiendas(id_tienda)
+);
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- MÓDULO DE INTELIGENCIA Y ALGORITMOS PREDICTIVOS
+-- ════════════════════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS calendario_eventos (
+    id_evento INTEGER PRIMARY KEY AUTOINCREMENT,
+    fecha DATE NOT NULL,
+    ciudad TEXT NOT NULL,
+    tipo TEXT NOT NULL, -- Ej: 'FESTIVO', 'LLUVIA', 'TEMPORADA_ALTA'
+    descripcion TEXT,
+    multiplicador_demanda REAL NOT NULL DEFAULT 1.0,
+    UNIQUE(fecha, ciudad, tipo)
+);
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- MÓDULO 8: ASESOR DE MARKETING IA E INSTAGRAM
+-- ════════════════════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS instagram_kpis (
+    id_registro INTEGER PRIMARY KEY AUTOINCREMENT,
+    fecha DATE NOT NULL,
+    seguidores INTEGER NOT NULL DEFAULT 0,
+    publicaciones_totales INTEGER NOT NULL DEFAULT 0,
+    likes_promedio REAL NOT NULL DEFAULT 0,
+    comentarios_promedio REAL NOT NULL DEFAULT 0,
+    alcance_estimado REAL NOT NULL DEFAULT 0,
+    notas_ia TEXT,
+    creado_en TEXT DEFAULT (datetime('now')),
+    UNIQUE(fecha)
+);
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- MÓDULO 9: FINANZAS Y LIQUIDACIONES (ROYALTIES)
+-- ════════════════════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS liquidaciones_mensuales (
+    id_liquidacion INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_tienda TEXT NOT NULL,
+    mes TEXT NOT NULL, -- Formato: 'YYYY-MM'
+    ventas_netas REAL NOT NULL DEFAULT 0.0,
+    royalty_pct REAL NOT NULL DEFAULT 0.05,
+    royalty_eu REAL NOT NULL DEFAULT 0.0,
+    canon_pct REAL NOT NULL DEFAULT 0.02,
+    canon_eu REAL NOT NULL DEFAULT 0.0,
+    estado TEXT DEFAULT 'PENDIENTE', -- PENDIENTE, PAGADO
+    fecha_generacion TEXT DEFAULT (datetime('now')),
+    fecha_pago TEXT,
+    UNIQUE(id_tienda, mes),
+    FOREIGN KEY(id_tienda) REFERENCES tiendas(id_tienda) ON DELETE CASCADE
+);
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- MÓDULO 10: SOPORTE Y HELPDESK
+-- ════════════════════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS soporte_tickets (
+    id_ticket INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_tienda TEXT NOT NULL,
+    asunto TEXT NOT NULL,
+    categoria TEXT NOT NULL, -- Ej: 'MANTENIMIENTO', 'TPV', 'RRHH', 'OTRO'
+    descripcion TEXT NOT NULL,
+    estado TEXT DEFAULT 'ABIERTO', -- ABIERTO, EN_PROGRESO, CERRADO
+    respuesta_admin TEXT,
+    creado_en TEXT DEFAULT (datetime('now')),
+    actualizado_en TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY(id_tienda) REFERENCES tiendas(id_tienda) ON DELETE CASCADE
+);
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- MÓDULO 11: EXPANSIÓN Y ONBOARDING (Nuevas Aperturas)
+-- ════════════════════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS expansion_proyectos (
+    id_proyecto INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre_franquiciado TEXT NOT NULL,
+    ciudad TEXT NOT NULL,
+    estado_proyecto TEXT DEFAULT 'BUSQUEDA_LOCAL', -- BUSQUEDA_LOCAL, CONTRATOS, REFORMAS, FORMACION, APERTURA, CANCELADO
+    fecha_inicio TEXT DEFAULT (date('now')),
+    fecha_estimada_apertura TEXT,
+    creado_en TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS expansion_tareas (
+    id_tarea INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_proyecto INTEGER NOT NULL,
+    fase TEXT NOT NULL,
+    descripcion TEXT NOT NULL,
+    completada BOOLEAN DEFAULT 0,
+    fecha_completada TEXT,
+    FOREIGN KEY(id_proyecto) REFERENCES expansion_proyectos(id_proyecto) ON DELETE CASCADE
+);
+
+-- FASE 12: Simulador de Factibilidad de Expansión
+CREATE TABLE IF NOT EXISTS expansion_simulaciones (
+    id_simulacion INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre_candidato TEXT,
+    ubicacion TEXT,
+    tipo_local TEXT, -- CALLE, CC
+    horario TEXT,
+    personal_requerido INTEGER,
+    venta_estimada_diaria REAL,
+    pct_delivery REAL,
+    ebitda_estimado_anual REAL,
+    score_viabilidad INTEGER,
+    fecha_simulacion TEXT DEFAULT CURRENT_TIMESTAMP,
+    datos_json TEXT -- Guardará todos los escenarios (Pesimista, Promedio, Optimista) en formato JSON
+);

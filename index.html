@@ -385,13 +385,57 @@
         </svg>
         <span>Redirigiendo a tu panel...</span>
       </div>
-    </form>
+      </form>
+
+      <div style="text-align:center; margin-top:20px; border-top:1px solid var(--crema-dark); padding-top:16px;">
+        <button type="button" onclick="abrirModalFranquicia()" style="background:none; border:none; color:var(--granate); font-family:'Outfit'; font-weight:600; font-size:14px; cursor:pointer; text-decoration:underline;">
+          ¿Quieres abrir una franquicia? Solicita información
+        </button>
+      </div>
 
     <div class="login-footer">
       <span>
-        <span class="version-badge">v1.1</span>
+        <span class="version-badge">v1.6</span>
         &nbsp;Crosti Cookies © 2027 &nbsp;·&nbsp; Barcelona
       </span>
+    </div>
+  </div>
+
+  <!-- MODAL SOLICITUD FRANQUICIA -->
+  <div id="modalFranquicia" style="display:none; position:fixed; inset:0; background:rgba(45,27,30,0.8); z-index:9999; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:var(--crema); border-radius:var(--radius); padding:32px; width:100%; max-width:480px; position:relative; box-shadow:var(--shadow-lg);">
+      <button onclick="cerrarModalFranquicia()" style="position:absolute; right:20px; top:20px; background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-muted);">&times;</button>
+      <h2 style="color:var(--granate); font-size:22px; margin-bottom:8px;">Únete a la familia Crosti</h2>
+      <p style="color:var(--text-muted); font-size:14px; margin-bottom:24px;">Déjanos tus datos y nuestro equipo de expansión te contactará.</p>
+
+      <div class="form-group">
+        <label>Nombre y Apellidos</label>
+        <input type="text" id="franq_nombre" style="width:100%; padding:10px 14px; border-radius:10px; border:2px solid transparent; outline:none; font-family:'Outfit';">
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="franq_email" style="width:100%; padding:10px 14px; border-radius:10px; border:2px solid transparent; outline:none; font-family:'Outfit';">
+      </div>
+      <div class="form-group">
+        <label>Teléfono</label>
+        <input type="tel" id="franq_telefono" style="width:100%; padding:10px 14px; border-radius:10px; border:2px solid transparent; outline:none; font-family:'Outfit';">
+      </div>
+      <div class="form-group">
+        <label>Ciudad de Interés</label>
+        <input type="text" id="franq_ciudad" style="width:100%; padding:10px 14px; border-radius:10px; border:2px solid transparent; outline:none; font-family:'Outfit';">
+      </div>
+      <div class="form-group">
+        <label>Capital Disponible</label>
+        <select id="franq_capital" style="width:100%; padding:10px 14px; border-radius:10px; border:none; outline:none; font-family:'Outfit';">
+          <option value="">Selecciona una opción...</option>
+          <option value="Menos de 30k">Menos de 30.000€</option>
+          <option value="30k - 50k">30.000€ - 50.000€</option>
+          <option value="50k - 100k">50.000€ - 100.000€</option>
+          <option value="Más de 100k">Más de 100.000€</option>
+        </select>
+      </div>
+
+      <button type="button" class="btn-login" onclick="enviarSolicitudFranquicia()">Enviar Solicitud</button>
     </div>
   </div>
 
@@ -512,6 +556,55 @@
           .then(reg => console.log('[CC PWA] SW registrado:', reg.scope))
           .catch(err => console.error('[CC PWA] SW error:', err));
       });
+    }
+
+    // ─── SOLICITUD DE FRANQUICIA ─────────────────────────────
+    function abrirModalFranquicia() {
+      document.getElementById('modalFranquicia').style.display = 'flex';
+    }
+    function cerrarModalFranquicia() {
+      document.getElementById('modalFranquicia').style.display = 'none';
+    }
+    async function enviarSolicitudFranquicia() {
+      const nombre = document.getElementById('franq_nombre').value;
+      const email = document.getElementById('franq_email').value;
+      const telefono = document.getElementById('franq_telefono').value;
+      const ciudad = document.getElementById('franq_ciudad').value;
+      const capital = document.getElementById('franq_capital').value;
+
+      if (!nombre || !email || !telefono || !ciudad || !capital) {
+        return alert('Por favor, rellena todos los campos');
+      }
+
+      const btn = document.querySelector('#modalFranquicia .btn-login');
+      btn.innerText = 'Enviando...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/franquicias/solicitudes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nombre_completo: nombre, email, telefono, ciudad_interes: ciudad, capital_disponible: capital
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('¡Gracias! Hemos recibido tu solicitud y te contactaremos pronto.');
+          cerrarModalFranquicia();
+          document.getElementById('franq_nombre').value = '';
+          document.getElementById('franq_email').value = '';
+          document.getElementById('franq_telefono').value = '';
+          document.getElementById('franq_ciudad').value = '';
+          document.getElementById('franq_capital').value = '';
+        } else {
+          alert('Error: ' + data.error);
+        }
+      } catch (e) {
+        alert('Error de conexión');
+      }
+      btn.innerText = 'Enviar Solicitud';
+      btn.disabled = false;
     }
   </script>
 </body>
