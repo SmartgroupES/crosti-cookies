@@ -1,7 +1,8 @@
 const translations = {
   es: {
     "nav_dashboard": "Dashboard",
-    "nav_lab_mode": "Modo Laboratorio",
+    "nav_lab_mode": "Modo Lab",
+    "nav_vision": "Visión Global Empresa",
     "nav_resumen": "Panel Global",
     "nav_operaciones": "Operaciones",
     "nav_obrador": "Obrador Central (Producción)",
@@ -58,7 +59,8 @@ const translations = {
   },
   ca: {
     "nav_dashboard": "Quadre de Comandament",
-    "nav_lab_mode": "Mode Laboratori",
+    "nav_lab_mode": "Mode Lab",
+    "nav_vision": "Visió Global Empresa",
     "nav_resumen": "Plafó Global",
     "nav_operaciones": "Operacions",
     "nav_obrador": "Obrador Central (Producció)",
@@ -115,7 +117,8 @@ const translations = {
   },
   en: {
     "nav_dashboard": "Dashboard",
-    "nav_lab_mode": "Laboratory Mode",
+    "nav_lab_mode": "Lab Mode",
+    "nav_vision": "Global Company Vision",
     "nav_resumen": "Global Panel",
     "nav_operaciones": "Operations",
     "nav_obrador": "Central Bakery (Production)",
