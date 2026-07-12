@@ -2642,7 +2642,8 @@
   if (!token || rol !== 'ADMIN') window.location.href = './index.html';
 
   const nombre = localStorage.getItem('cc_nombre');
-  document.getElementById('sbUserName').textContent = nombre || 'Administrador';
+  const sbUserNameEl = document.getElementById('sbUserName');
+  if (sbUserNameEl) sbUserNameEl.textContent = nombre || 'Administrador';
 
   const now = new Date();
   document.getElementById('datePill').textContent = now.toLocaleDateString('es-ES', {weekday:'short',day:'2-digit',month:'long',year:'numeric'});
