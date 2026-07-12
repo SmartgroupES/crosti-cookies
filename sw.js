@@ -61,7 +61,27 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Assets estáticos → Cache First, fallback a Network
+  // Documentos HTML (navegación) → Network First para tener siempre la última versión
+  if (event.request.mode === 'navigate' || event.request.destination === 'document' || url.pathname.endsWith('.html')) {
+    event.respondWith(
+      fetch(event.request).then((response) => {
+        // Clonar y guardar la última versión en caché
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, clone);
+        });
+        return response;
+      }).catch(() => {
+        // Fallback a caché si no hay red
+        return caches.match(event.request).then((cached) => {
+          return cached || caches.match('./index.html');
+        });
+      })
+    );
+    return;
+  }
+
+  // Resto de assets estáticos (JS, CSS, imágenes) → Cache First, fallback a Network
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
@@ -81,10 +101,8 @@ self.addEventListener('fetch', (event) => {
         }
         return response;
       }).catch(() => {
-        // Fallback offline para HTML
-        if (event.request.destination === 'document') {
-          return caches.match('./index.html');
-        }
+        // Fallback en caso de error (ya gestionado arriba para HTML)
+        return new Response();
       });
     })
   );

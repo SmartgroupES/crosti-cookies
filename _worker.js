@@ -520,27 +520,31 @@ export default {
 
         let kpi, ventasHora, topProductos, personal;
         
+        const entorno = request.headers.get('x-entorno') || 'PROD';
+        const envFilterKPI = entorno === 'PROD' ? "AND id_tienda NOT LIKE 'MAD-%'" : "AND id_tienda LIKE 'MAD-%'";
+        const envFilter = entorno === 'PROD' ? "AND id_tienda NOT LIKE 'MAD-%'" : "AND id_tienda LIKE 'MAD-%'";
+
         if (id_tienda_req === 'TODAS') {
           kpi = await env.CC_DB.prepare(
-            'SELECT SUM(ventas_netas_eu) as ventas_netas_eu, SUM(num_tickets) as num_tickets, SUM(unidades_vendidas) as unidades_vendidas, SUM(mermas_eu) as mermas_eu, SUM(horas_hombre) as horas_hombre FROM v_kpis_diarios WHERE fecha = ?'
+            `SELECT SUM(ventas_netas_eu) as ventas_netas_eu, SUM(num_tickets) as num_tickets, SUM(unidades_vendidas) as unidades_vendidas, SUM(mermas_eu) as mermas_eu, SUM(horas_hombre) as horas_hombre FROM v_kpis_diarios WHERE fecha = ? ${envFilterKPI}`
           ).bind(fecha).first();
           if (kpi && kpi.num_tickets) kpi.ticket_medio = kpi.ventas_netas_eu / kpi.num_tickets;
           
           ventasHora = (await env.CC_DB.prepare(`
             SELECT hora, SUM(total_linea) as ventas_eu, SUM(cantidad) as unidades FROM ventas_detalladas
-            WHERE fecha = ? GROUP BY hora ORDER BY hora
+            WHERE fecha = ? ${envFilter} GROUP BY hora ORDER BY hora
           `).bind(fecha).all()).results;
 
           topProductos = (await env.CC_DB.prepare(`
             SELECT vd.id_producto, p.nombre, SUM(vd.cantidad) as unidades, SUM(vd.total_linea) as ventas_eu
             FROM ventas_detalladas vd JOIN productos p ON vd.id_producto = p.id_producto
-            WHERE vd.fecha = ? GROUP BY vd.id_producto ORDER BY ventas_eu DESC LIMIT 5
+            WHERE vd.fecha = ? ${envFilter.replace('id_tienda', 'vd.id_tienda')} GROUP BY vd.id_producto ORDER BY ventas_eu DESC LIMIT 5
           `).bind(fecha).all()).results;
 
           personal = (await env.CC_DB.prepare(`
             SELECT u.nombre, gp.turno, gp.hora_entrada, gp.hora_salida, gp.horas_trabajadas, gp.kpi_ventas_hora
             FROM gestion_personal gp JOIN usuarios u ON gp.id_operario = u.id
-            WHERE gp.fecha = ? ORDER BY gp.hora_entrada
+            WHERE gp.fecha = ? ${envFilter.replace('id_tienda', 'gp.id_tienda')} ORDER BY gp.hora_entrada
           `).bind(fecha).all()).results;
 
         } else {
@@ -687,6 +691,8 @@ export default {
         if (error) return errRes(error, 401);
 
         const mesActual = new Date().toISOString().slice(0, 7);
+        const entorno = request.headers.get('x-entorno') || 'PROD';
+        const envFilter = entorno === 'PROD' ? "AND t.id_tienda NOT LIKE 'MAD-%'" : "AND t.id_tienda LIKE 'MAD-%'";
 
         const { results } = await env.CC_DB.prepare(`
           SELECT 
@@ -697,7 +703,7 @@ export default {
           LEFT JOIN ventas_detalladas v 
             ON t.id_tienda = v.id_tienda 
             AND v.fecha LIKE ?
-          WHERE t.activa = 1
+          WHERE t.activa = 1 ${envFilter}
           GROUP BY t.id_tienda
         `).bind(mesActual + '%').all();
         
@@ -710,6 +716,9 @@ export default {
         if (error) return errRes(error, 401);
 
         const fecha = url.searchParams.get('fecha') || new Date().toISOString().split('T')[0];
+
+        const entorno = request.headers.get('x-entorno') || 'PROD';
+        const envFilterT = entorno === 'PROD' ? "AND t.id_tienda NOT LIKE 'MAD-%'" : "AND t.id_tienda LIKE 'MAD-%'";
 
         const { results: kpis } = await env.CC_DB.prepare(`
           SELECT
@@ -725,7 +734,7 @@ export default {
           FROM tiendas t
           LEFT JOIN v_kpis_diarios k
             ON k.id_tienda = t.id_tienda AND k.fecha = ?
-          WHERE t.activa = 1
+          WHERE t.activa = 1 ${envFilterT}
           ORDER BY t.id_tienda
         `).bind(fecha, fecha).all();
 
@@ -733,10 +742,11 @@ export default {
           'SELECT * FROM v_food_cost_teorico ORDER BY id_producto'
         ).all();
 
+        const envFilter = entorno === 'PROD' ? "AND id_tienda NOT LIKE 'MAD-%'" : "AND id_tienda LIKE 'MAD-%'";
         // Mermas por tienda
         const { results: mermas } = await env.CC_DB.prepare(`
           SELECT id_tienda, SUM(cantidad_ud) as total_ud, SUM(coste_economico) as total_eu
-          FROM control_mermas WHERE fecha = ?
+          FROM control_mermas WHERE fecha = ? ${envFilter}
           GROUP BY id_tienda
         `).bind(fecha).all();
 
@@ -750,7 +760,7 @@ export default {
             COALESCE(SUM(num_tickets), 0)       AS num_tickets,
             COALESCE(SUM(ventas_netas_eu), 0)   AS ventas_netas_eu
           FROM v_kpis_diarios
-          WHERE fecha = date(?, '-1 day')
+          WHERE fecha = date(?, '-1 day') ${envFilter}
         `).bind(fecha).first();
         
         const totalVentasAyer = ayerRes ? ayerRes.ventas_netas_eu : 0;
@@ -764,12 +774,13 @@ export default {
         if (totalTicketsAyer > 0) delta_tickets_pct = Math.round(((totalTickets - totalTicketsAyer) / totalTicketsAyer) * 100);
         else if (totalTickets > 0) delta_tickets_pct = 100;
 
+        const envFilterV = entorno === 'PROD' ? "AND v.id_tienda NOT LIKE 'MAD-%'" : "AND v.id_tienda LIKE 'MAD-%'";
         // Top 5 Productos del día
         const { results: topProductos } = await env.CC_DB.prepare(`
           SELECT p.nombre, SUM(v.cantidad) as total_cantidad, SUM(v.total_linea) as total_ventas
           FROM ventas_detalladas v
           JOIN productos p ON v.id_producto = p.id_producto
-          WHERE v.fecha = ?
+          WHERE v.fecha = ? ${envFilterV}
           GROUP BY v.id_producto
           ORDER BY total_ventas DESC
           LIMIT 5
@@ -1015,11 +1026,13 @@ export default {
             data = (await env.CC_DB.prepare(q).bind(...params).all()).results;
           }
           else if (tipo === 'ventas-semana') {
+            const entorno = request.headers.get('x-entorno') || 'PROD';
+            const envFilter = entorno === 'PROD' ? "AND id_tienda NOT LIKE 'MAD-%'" : "AND id_tienda LIKE 'MAD-%'";
             let q = `
               SELECT fecha, SUM(total_linea) as ventas_dia 
               FROM ventas_detalladas 
               WHERE fecha >= date('now', '-7 days')
-              ${include_virtual ? '' : 'AND id_tienda IN (SELECT id_tienda FROM tiendas WHERE is_virtual = 0)'}
+              ${envFilter}
               GROUP BY fecha
               ORDER BY fecha ASC
             `;
