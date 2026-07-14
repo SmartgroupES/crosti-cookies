@@ -309,6 +309,36 @@
       .login-card { padding: 36px 24px; margin: 16px; }
       .brand-name { font-size: 22px; }
     }
+    /* -- MOBILE FIRST GLOBALS -- */
+    html, body {
+      max-width: 100vw !important;
+      overflow-x: hidden !important;
+      box-sizing: border-box !important;
+    }
+    .layout, .main-wrapper, .content {
+      max-width: 100vw !important;
+      box-sizing: border-box !important;
+    }
+    @media (max-width: 767px) {
+      .global-kpi-bar, 
+      .tienda-grid,
+      .kpi-grid,
+      .metric-cards-container {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 16px;
+      }
+      .gkpi, .tienda-card, .login-card {
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+      input, select, textarea, button, .btn, .btn-primary {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0.8rem 1rem !important;
+        box-sizing: border-box;
+      }
+    }
   </style>
 </head>
 <body>
@@ -317,15 +347,35 @@
   <div class="deco-cookie deco-cookie-2"></div>
   <div class="deco-cookie deco-cookie-3"></div>
 
-  <div class="login-card" role="main">
+  <!-- PORTAL SECTION -->
+  <div class="login-card" id="portalSection" role="main" style="display:none; max-width: 600px; text-align: center;">
+    <h2 style="color:var(--text-dark); margin-bottom: 30px; font-size: 24px;">Selecciona el Entorno</h2>
+    <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+      
+      <!-- Crosti Card -->
+      <div onclick="setTenant('CROSTI')" class="tenant-card" style="cursor:pointer; flex: 1; min-width: 220px; background: linear-gradient(135deg, #5C1420 0%, #7B1D2A 100%); border-radius: var(--radius); padding: 40px 20px; color: #FFF; box-shadow: var(--shadow-md); transition: transform 0.2s;">
+        <h3 style="font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">CROSTI COOKIES</h3>
+        <p style="font-size: 13px; color: rgba(255,255,255,0.7); margin-top: 10px;">Producción Piloto</p>
+      </div>
+
+      <!-- Scaleo Card -->
+      <div onclick="setTenant('SCALEO')" class="tenant-card" style="cursor:pointer; flex: 1; min-width: 220px; background: linear-gradient(135deg, #0B2347 0%, #0A1C2A 100%); border-radius: var(--radius); padding: 40px 20px; color: #FFF; box-shadow: 0 10px 30px rgba(10,28,42,0.3); transition: transform 0.2s;">
+        <h3 style="font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">SCALEO</h3>
+        <p style="font-size: 13px; color: rgba(255,255,255,0.7); margin-top: 10px;">Demo SaaS HORECA</p>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="login-card" id="loginSection" role="main" style="display:block;">
     <!-- Logo -->
     <div class="logo-section">
-      <div class="logo-badge" aria-hidden="true">
+      <div class="logo-badge" aria-hidden="true" title="Crosti Cookies">
         <!-- Cookie SVG icon -->
-        <img src="/logo.png" alt="Crosti Cookies Logo" style="width: 46px; height: 46px; border-radius: 12px; object-fit: contain;">
+        <img src="/logo.png" id="mainLogoImg" alt="Logo" style="width: 46px; height: 46px; border-radius: 12px; object-fit: contain;">
       </div>
-      <div class="brand-name">CROSTI COOKIES</div>
-      <div class="brand-sub">Sistema de Gestión</div>
+      <div class="brand-name" id="brandName">CROSTI COOKIES</div>
+      <div class="brand-sub" id="brandSub">Sistema de Gestión</div>
     </div>
 
     <div class="divider"></div>
@@ -395,7 +445,7 @@
 
     <div class="login-footer">
       <span>
-        <span class="version-badge">v1.6</span>
+        <span class="version-badge">v1.7</span>
         &nbsp;Crosti Cookies © 2027 &nbsp;·&nbsp; Barcelona
       </span>
     </div>
@@ -447,6 +497,55 @@
       'FRANQUICIADO': './dashboard-franquiciado.html',
       'ADMIN': './dashboard-admin.html',
     };
+
+    // ─── THEME & TENANT LOGIC ────────────────────────────────
+    let currentTenant = 'CROSTI';
+
+    function setTenant(empresa) {
+      currentTenant = empresa;
+      document.getElementById('portalSection').style.display = 'none';
+      document.getElementById('loginSection').style.display = 'block';
+      
+      const root = document.documentElement;
+      if (empresa === 'SCALEO') {
+        root.style.setProperty('--granate', '#0A1C2A');
+        root.style.setProperty('--granate-deep', '#0B2347');
+        root.style.setProperty('--granate-light', '#1A334D');
+        root.style.setProperty('--crema', '#FDFBF7');
+        root.style.setProperty('--crema-dark', '#A68B6A');
+        root.style.setProperty('--gold', '#C9A84C');
+        document.getElementById('brandName').innerText = 'SCALEO';
+        document.getElementById('brandSub').innerText = 'Demo SaaS HORECA';
+        document.body.style.background = 'linear-gradient(135deg, #0B2347 0%, #0A1C2A 40%, #1A334D 100%)';
+        const logo = document.getElementById('mainLogoImg');
+        if(logo) {
+            logo.src = '/scaleo_logo.png';
+            logo.style.background = '#FFFFFF';
+        }
+        // Auto-fill email for demo (optional, but helpful)
+        if(!document.getElementById('email').value) {
+           document.getElementById('email').value = 'admin@scaleo.com';
+        }
+      } else {
+        root.style = '';
+        document.body.style.background = '';
+        document.getElementById('brandName').innerText = 'CROSTI COOKIES';
+        document.getElementById('brandSub').innerText = 'Sistema de Gestión';
+        const logo = document.getElementById('mainLogoImg');
+        if(logo) {
+            logo.src = '/logo.png';
+            logo.style.background = 'transparent';
+        }
+        if(document.getElementById('email').value === 'admin@scaleo.com') {
+           document.getElementById('email').value = '';
+        }
+      }
+    }
+
+    function goBackToPortal() {
+      document.getElementById('portalSection').style.display = 'block';
+      document.getElementById('loginSection').style.display = 'none';
+    }
 
     // ─── VERIFICAR SESIÓN ACTIVA ─────────────────────────────
     (function checkSession() {
@@ -533,6 +632,7 @@
         localStorage.setItem('cc_rol', data.rol);
         localStorage.setItem('cc_tienda', data.id_tienda || '');
         localStorage.setItem('cc_nombre', data.nombre || '');
+        localStorage.setItem('cc_empresa', data.id_empresa || 'CROSTI');
 
         // Mostrar redirect
         alertInfo.classList.add('show');

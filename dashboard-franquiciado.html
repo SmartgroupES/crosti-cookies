@@ -4,7 +4,7 @@
   
   <link rel="apple-touch-icon" href="/favicon.png">
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="description" content="Crosti Cookies — Panel Franquiciado. Cuadro de mando económico de tu tienda: ventas, mermas, personal, KPIs y facturas.">
   <meta name="theme-color" content="#7B1D2A">
   <title>Panel Franquiciado — Crosti Cookies</title>
@@ -25,10 +25,10 @@
       --success: #22863a; --warning: #D97706; --error: #DC2626;
       --bg: #F2E8DC; --radius: 16px; --radius-sm: 10px;
     }
-    body { font-family: 'Outfit', sans-serif; background: var(--bg); min-height: 100vh; }
+    body { font-family: 'Outfit', sans-serif; background: var(--bg); min-height: 100dvh; }
 
     /* ── SIDEBAR (Tablet/Desktop) ────────────────────────── */
-    .layout { display: flex; min-height: 100vh; }
+    .layout { display: flex; min-height: 100dvh; }
     .sidebar {
       width: 240px; background: linear-gradient(180deg, var(--granate-deep) 0%, var(--granate) 100%);
       display: flex; flex-direction: column;
@@ -87,7 +87,7 @@
     .btn-logout-side:hover { color: rgba(255,255,255,0.9); }
 
     /* ── MAIN WRAPPER ────────────────────────────────────── */
-    .main-wrapper { flex: 1; display: flex; flex-direction: column; }
+    .main-wrapper { flex: 1; display: flex; flex-direction: column; min-height: 100dvh; }
     .topbar {
       background: var(--blanco); padding: 0 24px; height: 64px;
       display: flex; align-items: center; justify-content: space-between;
@@ -119,9 +119,9 @@
     /* ── KPI GRID ────────────────────────────────────────── */
     .kpi-grid {
       display: grid; gap: 16px; margin-bottom: 24px;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-    @media (min-width: 768px) { .kpi-grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (min-width: 768px) { .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 
     .kpi-card {
       background: var(--blanco); border-radius: var(--radius); padding: 20px;
@@ -182,6 +182,11 @@
     /* ── FORM FACTURA ────────────────────────────────────── */
     .form-grid { display: grid; gap: 14px; }
     @media (min-width: 600px) { .form-grid-2 { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 480px) {
+      .global-kpi-bar { grid-template-columns: 1fr; }
+      .gkpi-value { font-size: 28px; }
+      input, select, textarea { font-size: 16px !important; }
+    }
     .field-group { display: flex; flex-direction: column; gap: 5px; }
     .field-label { font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; text-transform: uppercase; }
     .field-input {
@@ -232,6 +237,51 @@
     .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 40; }
     .sidebar-overlay.show { display: block; }
     @media (min-width: 900px) { .sidebar-overlay { display: none !important; } }
+    /* -- MOBILE FIRST GLOBALS -- */
+    html, body {
+      max-width: 100vw !important;
+      overflow-x: hidden !important;
+      box-sizing: border-box !important;
+    }
+    .layout, .main-wrapper, .content {
+      max-width: 100vw !important;
+      box-sizing: border-box !important;
+    }
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin-bottom: 1rem;
+    }
+    .table-responsive table {
+      width: 100%;
+      min-width: 600px;
+    }
+    @media (max-width: 767px) {
+      .global-kpi-bar, 
+      .tienda-grid,
+      .kpi-grid,
+      .metric-cards-container {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 16px;
+      }
+      .gkpi, .tienda-card, .login-card {
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+      input, select, textarea, button, .btn, .btn-primary {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0.8rem 1rem !important;
+        box-sizing: border-box;
+      }
+    }
+      /* -- GLOBALS FIX -- */
+    .gkpi, .tienda-card, .chart-card {
+      min-width: 0;
+      word-wrap: break-word;
+    }
   </style>
 </head>
 <body>
@@ -367,12 +417,14 @@
             <div class="chart-title">🏆 Top 5 Productos — Hoy</div>
           </div>
           <div class="data-table-wrap">
-            <table id="topProductosTable">
+            <div class="table-responsive">
+<table id="topProductosTable">
               <thead><tr><th>#</th><th>Producto</th><th>Unidades</th><th>Ventas €</th></tr></thead>
               <tbody id="topProductosBody">
                 <tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted)">Cargando...</td></tr>
               </tbody>
             </table>
+</div>
           </div>
         </div>
       </div>
@@ -414,12 +466,14 @@
             <div id="kpiVentasHora" style="font-size:13px;color:var(--text-muted);">KPI: – €/h·h</div>
           </div>
           <div class="data-table-wrap">
-            <table id="personalTable">
+            <div class="table-responsive">
+<table id="personalTable">
               <thead><tr><th>Operario</th><th>Turno</th><th>Entrada</th><th>Salida</th><th>Horas</th><th>€/hora</th></tr></thead>
               <tbody id="personalBody">
                 <tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted)">Cargando...</td></tr>
               </tbody>
             </table>
+</div>
           </div>
         </div>
 
@@ -593,7 +647,8 @@
           </div>
           <p style="font-size:13px; color:var(--text-muted); margin-bottom:15px;">La Central genera automáticamente las liquidaciones a final de mes basadas en tus ventas netas.</p>
           <div class="data-table-wrap">
-            <table class="table" id="tablaLiquidacionesFran">
+            <div class="table-responsive">
+<table class="table" id="tablaLiquidacionesFran">
               <thead>
                 <tr>
                   <th>Mes</th>
@@ -606,6 +661,7 @@
               </thead>
               <tbody><tr><td colspan="6" style="text-align:center">Cargando...</td></tr></tbody>
             </table>
+</div>
           </div>
         </div>
       </div>
@@ -669,10 +725,12 @@
             <button class="btn" style="background:var(--crema-dark); color:var(--text-dark);" onclick="cargarTickets()">Actualizar</button>
           </div>
           <div class="data-table-wrap">
-            <table id="tablaTickets">
+            <div class="table-responsive">
+<table id="tablaTickets">
               <thead><tr><th>Fecha</th><th>Asunto</th><th>Categoría</th><th>Estado</th></tr></thead>
               <tbody><tr><td colspan="4" style="text-align:center;color:var(--text-muted)">Cargando...</td></tr></tbody>
             </table>
+</div>
           </div>
           </div>
         </div>
@@ -683,10 +741,12 @@
         <div class="chart-card">
           <div class="chart-header"><div class="chart-title">📢 Campañas Activas (Red Crosti)</div></div>
           <div class="data-table-wrap" style="margin-bottom:24px;">
-            <table id="tablaCampanasFran">
+            <div class="table-responsive">
+<table id="tablaCampanasFran">
               <thead><tr><th>Campaña</th><th>Fechas</th><th>Tipo</th></tr></thead>
               <tbody><tr><td colspan="3" style="text-align:center;color:var(--text-muted)">Cargando...</td></tr></tbody>
             </table>
+</div>
           </div>
         </div>
 
@@ -724,17 +784,18 @@
             <button class="btn" style="background:var(--crema-dark); color:var(--text-dark);" onclick="cargarMiRoi()">Actualizar</button>
           </div>
           <div class="data-table-wrap">
-            <table id="tablaMiRoi">
+            <div class="table-responsive">
+<table id="tablaMiRoi">
               <thead><tr><th>Campaña</th><th>Inversión</th><th>Ventas Atribuidas</th><th>ROI Estimado</th></tr></thead>
               <tbody><tr><td colspan="4" style="text-align:center;color:var(--text-muted)">Cargando...</td></tr></tbody>
             </table>
+</div>
           </div>
         </div>
       </div>
 
     </main>
   </div>
-</div>
 
 <script>
   // ─── AUTH GUARD ──────────────────────────────────────────
@@ -756,10 +817,21 @@
   document.getElementById('mesSelectorKPI').value = mesActual;
   document.getElementById('facFecha').value = now.toISOString().split('T')[0];
 
-  const API = (path, opts = {}) => fetch(path, {
-    ...opts,
-    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', ...(opts.headers || {}) }
-  });
+  const API = async (path, opts = {}) => {
+    const res = await fetch(path, {
+      ...opts,
+      headers: { 
+        'Authorization': `Bearer ${token}`, 
+        'Content-Type': 'application/json',
+        ...(opts.headers || {}) 
+      }
+    });
+    if (res.status === 401) {
+      localStorage.clear();
+      window.location.href = '/index.html';
+    }
+    return res;
+  };
 
   // ─── SIDEBAR MOBILE ──────────────────────────────────────
   document.getElementById('menuToggle').onclick = () => {

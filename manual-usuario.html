@@ -152,6 +152,51 @@
     /* FOOTER */
     .footer { text-align: center; padding: 30px; color: var(--text-muted); font-size: 9pt; border-top: 2px solid var(--crema-dark); margin-top: 20px; }
     .footer strong { color: var(--granate); }
+    /* -- MOBILE FIRST GLOBALS -- */
+    html, body {
+      max-width: 100vw !important;
+      overflow-x: hidden !important;
+      box-sizing: border-box !important;
+    }
+    .layout, .main-wrapper, .content {
+      max-width: 100vw !important;
+      box-sizing: border-box !important;
+    }
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin-bottom: 1rem;
+    }
+    .table-responsive table {
+      width: 100%;
+      min-width: 600px;
+    }
+    @media (max-width: 767px) {
+      .global-kpi-bar, 
+      .tienda-grid,
+      .kpi-grid,
+      .metric-cards-container {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 16px;
+      }
+      .gkpi, .tienda-card, .login-card {
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+      input, select, textarea, button, .btn, .btn-primary {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0.8rem 1rem !important;
+        box-sizing: border-box;
+      }
+    }
+      /* -- GLOBALS FIX -- */
+    .gkpi, .tienda-card, .chart-card {
+      min-width: 0;
+      word-wrap: break-word;
+    }
   </style>
 </head>
 <body>
@@ -175,7 +220,6 @@
     <div><div class="cover-meta-label">Red de Tiendas</div><div class="cover-meta-value">BCN-01 · MAD-01 · VAL-01</div></div>
   </div>
   <div class="cover-badge">🏗️ Cloudflare Pages + Workers + D1 + R2 · PWA Installable</div>
-</div>
 
 <!-- ═══════════════════ ÍNDICE ═══════════════════ -->
 <div class="section">
@@ -195,7 +239,6 @@
   <div class="toc-item"><span class="toc-num">08</span><span class="toc-title">Modo Offline y Sincronización</span><span class="toc-dots"></span><span class="toc-page">Pág. 17</span></div>
   <div class="toc-item"><span class="toc-num">09</span><span class="toc-title">Referencia API — Endpoints Técnicos</span><span class="toc-dots"></span><span class="toc-page">Pág. 18</span></div>
   <div class="toc-item"><span class="toc-num">10</span><span class="toc-title">Preguntas Frecuentes y Solución de Problemas</span><span class="toc-dots"></span><span class="toc-page">Pág. 20</span></div>
-</div>
 
 <!-- ═══════════════════ CAP 1 ═══════════════════ -->
 <div class="section page-break">
@@ -204,7 +247,8 @@
   <p class="section-intro">El Sistema de Gestión de <strong>Crosti Cookies</strong> es una Progressive Web App corporativa que digitaliza y centraliza todas las operaciones de la cadena de franquicias: desde la producción JIT en tienda hasta el análisis estratégico de expansión 2027–2031.</p>
 
   <h3>Arquitectura Técnica</h3>
-  <table>
+  <div class="table-responsive">
+<table>
     <thead><tr><th>Capa</th><th>Tecnología</th><th>Función</th></tr></thead>
     <tbody>
       <tr><td><strong>Frontend</strong></td><td>HTML5 + CSS + JS (PWA)</td><td>3 dashboards responsivos + offline</td></tr>
@@ -214,9 +258,11 @@
       <tr><td><strong>Hosting CDN</strong></td><td>Cloudflare Pages</td><td>SSL, deploy global, sin servidor</td></tr>
     </tbody>
   </table>
+</div>
 
   <h3>Red de Tiendas Activas</h3>
-  <table>
+  <div class="table-responsive">
+<table>
     <thead><tr><th>ID</th><th>Nombre</th><th>Ciudad</th><th>Perfil</th><th>Estado</th></tr></thead>
     <tbody>
       <tr><td><strong>BCN-01</strong></td><td>Barcelona · Eixample</td><td>Barcelona</td><td>Boutique Regalo</td><td class="td-yes">● Operativa</td></tr>
@@ -224,9 +270,11 @@
       <tr><td><strong>VAL-01</strong></td><td>Valencia · Centro</td><td>Valencia</td><td>High Traffic Impulse</td><td class="td-limit">◐ Q2 2027</td></tr>
     </tbody>
   </table>
+</div>
 
   <h3>Catálogo de Productos del Sistema (13 SKUs)</h3>
-  <table>
+  <div class="table-responsive">
+<table>
     <thead><tr><th>Familia</th><th>Productos</th><th>PVP</th><th>Food Cost Obj.</th></tr></thead>
     <tbody>
       <tr><td>Cookie Clásica</td><td>Chocolate Chip, Doble Chocolate, Vainilla Pecana, Mantequilla Avellana</td><td>3.50€</td><td>18–22%</td></tr>
@@ -261,7 +309,6 @@
     <span class="callout-icon">💡</span>
     <div class="callout-content"><div class="callout-title">Recuperación de contraseña</div>En v1.0 la gestiona el admin central. Escribe a <strong>admin@crosticookies.com</strong> indicando tu email corporativo.</div>
   </div>
-</div>
 
 <!-- ═══════════════════ CAP 3 ═══════════════════ -->
 <div class="section">
@@ -276,7 +323,8 @@
   </div>
 
   <h3>Matriz de Permisos Completa</h3>
-  <table>
+  <div class="table-responsive">
+<table>
     <thead><tr><th>Función</th><th>Operario</th><th>Franquiciado</th><th>Admin</th></tr></thead>
     <tbody>
       <tr><td>Plan Horneado JIT</td><td class="td-yes">✅ Su tienda</td><td class="td-yes">✅ Su tienda</td><td class="td-yes">✅ Todas</td></tr>
@@ -344,7 +392,8 @@
     </ul>
   </div>
 
-  <table>
+  <div class="table-responsive">
+<table>
     <thead><tr><th>Motivo de Merma</th><th>Cuándo usarlo</th></tr></thead>
     <tbody>
       <tr><td>Horneado exceso</td><td>Se produjo más de lo vendido al cierre</td></tr>
@@ -356,6 +405,7 @@
       <tr><td>Otro</td><td>Causa no contemplada (añadir nota descriptiva)</td></tr>
     </tbody>
   </table>
+</div>
 
   <h3>4.3 — Foto Obligatoria cuando Merma &gt; 2.5%</h3>
   <div class="callout danger">
@@ -401,7 +451,6 @@
     <span class="callout-icon">⚠️</span>
     <div class="callout-content"><div class="callout-title">El inventario se bloquea si hay merma sin foto adjunta</div>Primero completa el registro de merma (con foto si aplica) y luego envía el inventario de cierre. El sistema comprueba el estado de las mermas antes de aceptar el inventario.</div>
   </div>
-</div>
 
 <!-- ═══════════════════ CAP 5 ═══════════════════ -->
 <div class="section page-break">
@@ -434,7 +483,8 @@
       <li><strong>Food Cost Real vs Teórico</strong>: Barras de progreso por familia de producto con umbral visual.</li>
     </ul>
   </div>
-  <table>
+  <div class="table-responsive">
+<table>
     <thead><tr><th>Color barra Food Cost</th><th>Situación</th><th>Acción recomendada</th></tr></thead>
     <tbody>
       <tr><td style="color:#22863A;font-weight:700">🟢 Verde</td><td>Dentro del objetivo</td><td>Mantener operaciones</td></tr>
@@ -442,6 +492,7 @@
       <tr><td style="color:#DC2626;font-weight:700">🔴 Rojo</td><td>Fuera de objetivo</td><td>Notificar al Admin Central urgente</td></tr>
     </tbody>
   </table>
+</div>
 
   <h3>5.3 — Control de Personal y Turnos</h3>
   <div class="screen-box">
@@ -452,7 +503,8 @@
       <li><strong>KPI €/h·h del día</strong>: Productividad media del equipo mostrada en la cabecera de la sección.</li>
     </ul>
   </div>
-  <table>
+  <div class="table-responsive">
+<table>
     <thead><tr><th>Turno</th><th>Horario típico</th><th>Uso</th></tr></thead>
     <tbody>
       <tr><td style="color:#854D0E;font-weight:700">☀️ Mañana</td><td>08:00 – 14:00</td><td>Apertura, producción matinal y primera hornada</td></tr>
@@ -461,6 +513,7 @@
       <tr><td style="color:#881337;font-weight:700">🌙 Cierre</td><td>18:00 – 22:00</td><td>Limpieza, inventario, cierre de caja y mermas</td></tr>
     </tbody>
   </table>
+</div>
 
   <h3>5.4 — KPIs Mensuales</h3>
   <div class="screen-box">
@@ -484,7 +537,6 @@
     <span class="callout-icon">📋</span>
     <div class="callout-content"><div class="callout-title">¿Por qué es importante registrar facturas?</div>El Food Cost Real = (compras / ventas × 100). Sin facturas registradas, el KPI mensual aparece en 0% y no puedes controlar la rentabilidad real de tu tienda frente al modelo teórico del obrador.</div>
   </div>
-</div>
 
 <!-- ═══════════════════ CAP 6 ═══════════════════ -->
 <div class="section page-break">
@@ -505,7 +557,8 @@
 
   <h3>6.2 — Escandallos y Food Cost Teórico</h3>
   <p style="font-size:10pt;color:var(--text-muted);line-height:1.7;margin-bottom:12px">Los escandallos son las recetas maestras del obrador. Definen cada ingrediente y cantidad por producto. El sistema calcula el Food Cost Teórico automáticamente a partir de los escandallos y los costes actuales.</p>
-  <table>
+  <div class="table-responsive">
+<table>
     <thead><tr><th>Producto</th><th>PVP</th><th>Coste Prod. €</th><th>Food Cost %</th><th>Objetivo</th></tr></thead>
     <tbody>
       <tr><td>Cookie Clásica Choc Chip</td><td>3.50€</td><td>~0.72€</td><td>~20.5%</td><td>18–22%</td></tr>
@@ -515,6 +568,7 @@
       <tr><td>Pack 4 Clásicas</td><td>12.00€</td><td>~2.31€</td><td>~19.2%</td><td>18–22%</td></tr>
     </tbody>
   </table>
+</div>
   <div class="callout gold">
     <span class="callout-icon">🧮</span>
     <div class="callout-content"><div class="callout-title">Fórmula Food Cost Teórico</div><strong>FC% = (Σ cantidad_ingrediente × coste_unitario) / PVP × 100</strong><br>Cantidades en g/ml → dividir coste por 1.000 | cantidades en ud → coste directo</div>
@@ -536,7 +590,8 @@
       <li><strong>Tabla de clientes</strong>: Nombre, email, tienda, segmento, visitas, gasto total y ticket medio.</li>
     </ul>
   </div>
-  <table>
+  <div class="table-responsive">
+<table>
     <thead><tr><th>Segmento</th><th>Criterio de inclusión</th></tr></thead>
     <tbody>
       <tr><td style="color:#78500A;font-weight:700">👑 VIP Premium</td><td>≥20 visitas Y ≥150€ gasto total</td></tr>
@@ -546,10 +601,12 @@
       <tr><td style="color:#9E9E9E;font-weight:700">💤 Inactivo</td><td>0 visitas / sin actividad reciente</td></tr>
     </tbody>
   </table>
+</div>
   <p style="font-size:9.5pt;color:var(--text-muted)">La segmentación se actualiza automáticamente cada noche a las 23:30 CET mediante un proceso programado.</p>
 
   <h3>6.5 — Plan de Expansión 2027–2031</h3>
-  <table>
+  <div class="table-responsive">
+<table>
     <thead><tr><th>Hito</th><th>Fecha</th><th>Tienda</th><th>Estado</th></tr></thead>
     <tbody>
       <tr><td>Apertura piloto</td><td>Sep 2024</td><td>BCN-01 · Barcelona Eixample</td><td class="td-yes">✅ Operativa</td></tr>
@@ -559,6 +616,7 @@
       <tr><td>Red consolidada</td><td>2029–2031</td><td>8–12 franquicias España</td><td class="td-no">📋 Plan estratégico</td></tr>
     </tbody>
   </table>
+</div>
   <p style="font-size:9.5pt;color:var(--text-muted)">El panel de expansión incluye un gráfico de barras con la proyección de tiendas activas por año y una tabla de KPIs objetivo del modelo (food cost, merma máx., PVP, ticket medio, rotación IQF).</p>
 
   <h3>6.6 — Gestión de Usuarios del Sistema</h3>
@@ -568,7 +626,6 @@
     <div class="step"><div class="step-num">3</div><div class="step-content"><div class="step-title">Selecciona Rol y Tienda</div><div class="step-desc">OPERARIO/FRANQUICIADO → asigna tienda. ADMIN → deja "Sin tienda". El acceso queda restringido automáticamente a nivel de API.</div></div></div>
     <div class="step"><div class="step-num">4</div><div class="step-content"><div class="step-title">Pulsa "Crear Usuario"</div><div class="step-desc">El usuario queda activo al instante y puede hacer login desde su dispositivo.</div></div></div>
   </div>
-</div>
 
 <!-- ═══════════════════ CAP 7 ═══════════════════ -->
 <div class="section page-break">
@@ -597,7 +654,6 @@
     <span class="callout-icon">✅</span>
     <div class="callout-content"><div class="callout-title">Atajos disponibles tras instalar (Android)</div>Pulsación larga en el icono → accesos directos a <strong>"Plan de Horneado"</strong> y <strong>"Registrar Merma"</strong> sin necesidad de navegar por la app.</div>
   </div>
-</div>
 
 <!-- ═══════════════════ CAP 8 ═══════════════════ -->
 <div class="section">
@@ -605,7 +661,8 @@
   <h2><span class="h2-icon">📡</span> Modo Offline y Sincronización</h2>
   <p class="section-intro">El Service Worker mantiene una caché local de todas las pantallas HTML para que la interfaz sea accesible sin conexión WiFi/datos. Las llamadas a la API requieren conexión activa.</p>
 
-  <table>
+  <div class="table-responsive">
+<table>
     <thead><tr><th>Función</th><th>Sin conexión</th><th>Notas</th></tr></thead>
     <tbody>
       <tr><td>Cargar pantalla de login</td><td class="td-yes">✅ Caché</td><td>Disponible desde caché local</td></tr>
@@ -616,12 +673,12 @@
       <tr><td>Subir foto merma a R2</td><td class="td-no">❌</td><td>Requiere conexión activa</td></tr>
     </tbody>
   </table>
+</div>
 
   <div class="callout warning">
     <span class="callout-icon">📶</span>
     <div class="callout-content"><div class="callout-title">Recomendación para tiendas con WiFi inestable</div>Carga el plan de horneado al <strong>inicio del turno</strong> con buena conexión. El Service Worker lo almacena en caché hasta 24 horas. La app seguirá mostrando el plan aunque se corte la WiFi.</div>
   </div>
-</div>
 
 <!-- ═══════════════════ CAP 9 ═══════════════════ -->
 <div class="section page-break">
@@ -660,7 +717,6 @@
     <span class="callout-icon">⚙️</span>
     <div class="callout-content"><div class="callout-title">Códigos de respuesta HTTP</div>200 OK · 201 Created · 400 Bad Request · 401 Unauthorized (token inválido o expirado) · 403 Forbidden (rol sin permiso) · 422 Unprocessable (cierre bloqueado por merma) · 500 Internal Error (verificar JWT_SECRET en CF)</div>
   </div>
-</div>
 
 <!-- ═══════════════════ CAP 10 ═══════════════════ -->
 <div class="section page-break">
@@ -709,7 +765,6 @@
     <span class="callout-icon">📞</span>
     <div class="callout-content"><div class="callout-title">Soporte Técnico — Contacto</div>Para incidencias no resueltas con este manual:<br>📧 <strong>admin@crosticookies.com</strong> | 🌐 <strong>https://crosti-cookies-pwa.pages.dev</strong><br>Indica siempre: tu email, la tienda (BCN-01/MAD-01/VAL-01) y el error exacto que aparece en pantalla.</div>
   </div>
-</div>
 
 <!-- FOOTER -->
 <div class="footer">

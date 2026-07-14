@@ -241,7 +241,7 @@ export default {
         const payload = {
           jti, sub: usuario.id, email: usuario.email,
           nombre: usuario.nombre, rol: usuario.rol,
-          id_tienda: usuario.id_tienda, iat: now, exp,
+          id_tienda: usuario.id_tienda, id_empresa: usuario.id_empresa || 'CROSTI', iat: now, exp,
         };
 
         const token = await signJWT(payload, env.JWT_SECRET);
@@ -261,7 +261,7 @@ export default {
           "UPDATE usuarios SET ultimo_login = datetime('now') WHERE id = ?"
         ).bind(usuario.id).run();
 
-        return jsonRes({ token, rol: usuario.rol, id_tienda: usuario.id_tienda, nombre: usuario.nombre });
+        return jsonRes({ token, rol: usuario.rol, id_tienda: usuario.id_tienda, nombre: usuario.nombre, id_empresa: usuario.id_empresa });
       }
 
       // POST /api/auth/logout
@@ -1064,6 +1064,9 @@ export default {
         const { nombre, tipo, contacto_nombre, contacto_telefono, contacto_email, condiciones_pago } = await request.json();
         if (!nombre) return errRes('Nombre requerido');
         
+        const exist = await env.CC_DB.prepare('SELECT id_proveedor FROM proveedores WHERE nombre = ?').bind(nombre).first();
+        if (exist) return errRes('Ya existe un proveedor con ese nombre', 400);
+        
         const id_proveedor = 'PROV-' + Date.now();
         await env.CC_DB.prepare(`
           INSERT INTO proveedores (id_proveedor, nombre, tipo, contacto_nombre, contacto_telefono, contacto_email, condiciones_pago)
@@ -1119,6 +1122,45 @@ export default {
         return jsonRes(results);
       }
 
+      // POST /api/inventario/update-cell
+      if (request.method === 'POST' && path === '/api/inventario/update-cell') {
+        const { user, error } = await authMiddleware(request, env);
+        if (error) return errRes(error, 401);
+        const { id_tienda, id_item, field, value } = await request.json();
+        
+        try {
+          if (field === 'stock') {
+            const numValue = parseFloat(value) || 0;
+            // 1. Update or Insert inventario_actual (assume SECO as default state for manual global edits)
+            await env.CC_DB.prepare(`
+              INSERT INTO inventario_actual (id_tienda, id_item, tipo_item, estado, cantidad, unidad)
+              VALUES (?, ?, 'INGREDIENTE', 'SECO', ?, 'ud')
+              ON CONFLICT(id_tienda, id_item, estado) DO UPDATE 
+              SET cantidad = excluded.cantidad, ultima_actualizacion = datetime('now')
+            `).bind(id_tienda, id_item, numValue).run();
+
+            // 2. Also insert/update inventarios_diarios for today so /alertas picks it up
+            const dateStr = new Date().toISOString().split('T')[0];
+            const check = await env.CC_DB.prepare(`SELECT id FROM inventarios_diarios WHERE id_tienda = ? AND id_ingrediente = ? AND fecha = ?`).bind(id_tienda, id_item, dateStr).first();
+            
+            if (check) {
+              await env.CC_DB.prepare(`UPDATE inventarios_diarios SET stock_fisico = ? WHERE id = ?`).bind(numValue, check.id).run();
+            } else {
+              await env.CC_DB.prepare(`INSERT INTO inventarios_diarios (id_tienda, fecha, id_ingrediente, stock_fisico, operario_id) VALUES (?, ?, ?, ?, ?)`).bind(id_tienda, dateStr, id_item, numValue, user ? user.sub : 'ADMIN').run();
+            }
+            
+          } else if (field === 'min') {
+            await env.CC_DB.prepare(`
+              UPDATE ingredientes SET stock_seguridad_min = ?, actualizado_en = datetime('now')
+              WHERE id_ingrediente = ?
+            `).bind(parseFloat(value) || 0, id_item).run();
+          }
+          return jsonRes({ success: true });
+        } catch (e) {
+          return errRes('Error al actualizar: ' + e.message, 500);
+        }
+      }
+
       // POST /api/inventario/transferir
       if (request.method === 'POST' && path === '/api/inventario/transferir') {
         const { user, error } = await authMiddleware(request, env);
@@ -1161,7 +1203,7 @@ export default {
             env.CC_DB.prepare(`
               INSERT INTO movimientos_inventario (fecha, hora, id_tienda, id_item, tipo_item, cantidad, tipo_movimiento, origen, destino, operario_id)
               VALUES (?, ?, ?, ?, ?, ?, 'TRANSFERENCIA_INT', ?, ?, ?)
-            `).bind(fecha, hora, id_tienda_origen, id_item, tipo_item, cantidad, estado_origen, estado_destino, user.id)
+            `).bind(fecha, hora, id_tienda_origen, id_item, tipo_item, cantidad, estado_origen, estado_destino, user.sub)
           );
         } else {
           // Movimiento B2B - Salida Origen
@@ -1169,14 +1211,14 @@ export default {
             env.CC_DB.prepare(`
               INSERT INTO movimientos_inventario (fecha, hora, id_tienda, id_item, tipo_item, cantidad, tipo_movimiento, origen, destino, operario_id)
               VALUES (?, ?, ?, ?, ?, ?, 'ENVIO_B2B', ?, ?, ?)
-            `).bind(fecha, hora, id_tienda_origen, id_item, tipo_item, cantidad, estado_origen, `${id_tienda_destino}(${estado_destino})`, user.id)
+            `).bind(fecha, hora, id_tienda_origen, id_item, tipo_item, cantidad, estado_origen, `${id_tienda_destino}(${estado_destino})`, user.sub)
           );
           // Movimiento B2B - Entrada Destino
           batch.push(
             env.CC_DB.prepare(`
               INSERT INTO movimientos_inventario (fecha, hora, id_tienda, id_item, tipo_item, cantidad, tipo_movimiento, origen, destino, operario_id)
               VALUES (?, ?, ?, ?, ?, ?, 'RECEPCION_B2B', ?, ?, ?)
-            `).bind(fecha, hora, id_tienda_destino, id_item, tipo_item, cantidad, `${id_tienda_origen}(${estado_origen})`, estado_destino, user.id)
+            `).bind(fecha, hora, id_tienda_destino, id_item, tipo_item, cantidad, `${id_tienda_origen}(${estado_origen})`, estado_destino, user.sub)
           );
         }
 
@@ -1185,18 +1227,30 @@ export default {
       }
 
       // GET /api/inventario/alertas — Alertas de reabastecimiento
-      if (request.method === 'GET' && path === '/api/inventario/alertas') {
+      if (request.method === 'GET' && path.startsWith('/api/inventario/alertas')) {
         const { user, error } = await authMiddleware(request, env, 'ADMIN');
         if (error) return errRes(error, 401);
 
-        const { results } = await env.CC_DB.prepare(`
-          SELECT i.id_ingrediente, i.nombre, i.categoria, i.unidad, i.stock_seguridad_min, i.coste_por_unidad,
-                 COALESCE((SELECT stock_fisico FROM inventarios_diarios d 
-                  WHERE d.id_ingrediente = i.id_ingrediente 
-                  ORDER BY fecha DESC LIMIT 1), 0) as stock_actual
-          FROM ingredientes i
-          WHERE i.activo = 1
-        `).all();
+        const url = new URL(request.url);
+        const tienda = url.searchParams.get('tienda');
+        let results;
+        if (tienda) {
+            results = (await env.CC_DB.prepare(`
+              SELECT i.id_ingrediente, i.nombre, i.categoria, i.unidad, i.stock_seguridad_min, i.coste_por_unidad,
+                     COALESCE((SELECT SUM(cantidad) FROM inventario_actual a 
+                      WHERE a.id_item = i.id_ingrediente AND a.id_tienda = ?), 0) as stock_actual
+              FROM ingredientes i
+              WHERE i.activo = 1
+            `).bind(tienda).all()).results;
+        } else {
+            results = (await env.CC_DB.prepare(`
+              SELECT i.id_ingrediente, i.nombre, i.categoria, i.unidad, i.stock_seguridad_min, i.coste_por_unidad,
+                     COALESCE((SELECT SUM(cantidad) FROM inventario_actual a 
+                      WHERE a.id_item = i.id_ingrediente), 0) as stock_actual
+              FROM ingredientes i
+              WHERE i.activo = 1
+            `).all()).results;
+        }
 
         const alertas = results.filter(r => r.stock_actual <= r.stock_seguridad_min);
         
@@ -1717,7 +1771,7 @@ export default {
         const auditoriaResult = await env.CC_DB.prepare(`
           INSERT INTO auditorias (id_tienda, fecha, auditor_id, puntuacion_obtenida, puntuacion_maxima, pct_cumplimiento, observaciones)
           VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id_auditoria
-        `).bind(id_tienda, fecha, user.id, puntos_obtenidos, puntos_posibles, pct_cumplimiento, observaciones || null).first();
+        `).bind(id_tienda, fecha, user.sub, puntos_obtenidos, puntos_posibles, pct_cumplimiento, observaciones || null).first();
 
         const id_auditoria = auditoriaResult.id_auditoria;
 

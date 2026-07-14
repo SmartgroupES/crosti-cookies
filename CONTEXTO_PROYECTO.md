@@ -22,3 +22,10 @@ Desarrollar un sistema de gestión inteligente e integral para **Crosti Cookies*
 1. **Fase de Simulación**: Uso de la Tienda Virtual (Test) para desarrollar los módulos matemáticos e interfaces utilizando información teórica.
 2. **Fase Piloto**: Conexión de los datos reales de la Tienda Modelo de Barcelona y del Obrador Central para validar y formalizar los procedimientos.
 3. **Fase de Expansión**: Uso de la plataforma validada como estándar para las futuras franquicias que se abran en el resto de España.
+
+## Visión a Largo Plazo: Evolución a SaaS Multi-Tenant (B2B)
+El objetivo final de esta plataforma es evolucionar desde un software interno para Crosti Cookies hacia un producto **SaaS B2B Multi-Tenant**. 
+El plan consta de 3 fases:
+1. **Fase 1: Perfeccionar "El Piloto"**: Usar Crosti Cookies como prueba de estrés para pulir inventarios, mermas, *food cost* y operativas de franquicia.
+2. **Fase 2: Arquitectura Multi-Tenant**: Agregar `id_empresa` a la base de datos para usar el mismo *Backbone* de código, aislando los datos de cada cliente.
+3. **Fase 3: Particularidades por Módulos**: Encender/apagar módulos según la industria (ej. Heladerías vs Empanadas) usando la misma base lógica.

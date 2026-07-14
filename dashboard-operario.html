@@ -4,7 +4,7 @@
   
   <link rel="apple-touch-icon" href="/favicon.png">
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="description" content="Crosti Cookies — Panel Operario. Plan de horneado JIT, registro de mermas e inventario de cierre.">
   <meta name="theme-color" content="#7B1D2A">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -21,18 +21,15 @@
       --text-dark: #2D1B1E; --text-muted: #8B6B72;
       --success: #22863a; --warning: #D97706; --error: #DC2626;
       --success-bg: #F0FFF4; --warning-bg: #FFFBEB; --error-bg: #FFF5F5;
-      --radius: 16px; --radius-sm: 10px;
+      --radius: 16px; --radius-sm: 10px; --bg: #F2E8DC;
     }
-    html, body { height: 100%; background: #F2E8DC; font-family: 'Outfit', sans-serif; }
+    body { font-family: 'Outfit', sans-serif; background: var(--bg); min-height: 100dvh; }
 
     /* ── TOPBAR ─────────────────────────────────────────────── */
     .topbar {
-      position: sticky; top: 0; z-index: 100;
-      background: linear-gradient(135deg, var(--granate-deep) 0%, var(--granate) 100%);
-      padding: 0 16px;
-      height: 60px;
+      background: var(--granate-deep); color: white; padding: env(safe-area-inset-top) calc(20px + env(safe-area-inset-right)) 0 calc(20px + env(safe-area-inset-left)); height: calc(64px + env(safe-area-inset-top));
       display: flex; align-items: center; justify-content: space-between;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+      position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
     .topbar-left { display: flex; align-items: center; gap: 10px; }
     .topbar-logo {
@@ -86,7 +83,9 @@
     }
 
     /* ── MAIN CONTENT ───────────────────────────────────────── */
-    .main { padding: 16px; max-width: 600px; margin: 0 auto; }
+    .layout { display: flex; flex-direction: column; min-height: 100dvh; }
+    .main-wrapper { flex: 1; padding: 16px calc(16px + env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left)); }
+    .main { max-width: 600px; margin: 0 auto; }
     .tab-panel { display: none; animation: fadeIn 0.3s ease; }
     .tab-panel.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
@@ -271,6 +270,54 @@
     @media (min-width: 600px) {
       .bake-list { display: grid; grid-template-columns: 1fr 1fr; }
       .inv-grid { grid-template-columns: 1fr 1fr; }
+    }
+    /* -- MOBILE FIRST GLOBALS -- */
+    html, body {
+      max-width: 100vw !important;
+      overflow-x: hidden !important;
+      box-sizing: border-box !important;
+    }
+    .layout, .main-wrapper, .content {
+      max-width: 100vw !important;
+      box-sizing: border-box !important;
+    }
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin-bottom: 1rem;
+    }
+    .table-responsive table {
+      width: 100%;
+      min-width: 600px;
+    }
+    @media (max-width: 767px) {
+      .global-kpi-bar, 
+      .tienda-grid,
+      .kpi-grid,
+      .metric-cards-container {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 16px;
+      }
+      .gkpi, .tienda-card, .login-card {
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+      input, select, textarea, button, .btn, .btn-primary {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0.8rem 1rem !important;
+        box-sizing: border-box;
+      }
+    }
+      /* Prevenir zoom en inputs en iPhone */
+    @media (max-width: 480px) {
+      input, select, textarea { font-size: 16px !important; }
+    }
+    .gkpi, .tienda-card, .chart-card {
+      min-width: 0;
+      word-wrap: break-word;
     }
   </style>
 </head>
@@ -522,9 +569,17 @@
   document.getElementById('userDisplay').textContent = nombre || rol;
   document.getElementById('tiendaBadge').textContent = tienda || '–';
 
-  const API = (path) => fetch(path, {
-    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
-  });
+  const API = async (path, opts = {}) => {
+    const res = await fetch(path, {
+      ...opts,
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', ...(opts.headers || {}) }
+    });
+    if (res.status === 401) {
+      localStorage.clear();
+      window.location.href = './index.html';
+    }
+    return res;
+  };
 
   // ─── TABS ────────────────────────────────────────────────
   document.querySelectorAll('.nav-tab').forEach(tab => {
